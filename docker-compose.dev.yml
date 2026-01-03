@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Spring Boot 애플리케이션
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/gyeonggi-partners:dev
+    container_name: gyeonggi-partners-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # PostgreSQL DB
+  postgres:
+    image: postgres:15-alpine # 가벼운 alpine 버전의 postgres 15 이미지 사용
+    container_name: gyeonggi-partners-postgres
+    ports:
+      - "5432:5432" # 외부에서 DB에 접속할 수 있도록 포트 매핑
+    environment:
+      POSTGRES_USER: ${DB_USERNAME} # app 서비스에서 사용할 DB 사용자 이름
+      POSTGRES_PASSWORD: ${DB_PASSWORD} # app 서비스에서 사용할 DB 비밀번호
+      POSTGRES_DB: ${DB_NAME} # app 서비스에서 사용할 데이터베이스 이름
+    volumes:
+      - postgres-data:/var/lib/postgresql/data # 데이터 영속성을 위한 볼륨 설정
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Redis
+  redis:
+    image: redis:7.4-alpine
+    container_name: gyeonggi-partners-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge

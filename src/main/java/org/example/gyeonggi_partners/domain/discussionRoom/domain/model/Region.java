@@ -1,0 +1,32 @@
+package org.example.gyeonggi_partners.domain.discussionRoom.domain.model;
+
+public enum Region {
+    SUWON,
+    SEONGNAM,
+    UIJEONGBU,
+    ANYANG,
+    BUCHEON,
+    GWANGMYEONG,
+    PYEONGTAEK,
+    DONGDUCHEON,
+    ANSAN,
+    GOYANG,
+    GWACHEON,
+    GURI,
+    NAMYANGJU,
+    OSAN,
+    SIHEUNG,
+    GUNPO,
+    UIWANG,
+    HANAM,
+    YONGIN,
+    PAJU,
+    ICHEON,
+    ANSEONG,
+    GIMPO,
+    HWASEONG,
+    GWANGJU,
+    YANGJU,
+    POCHEON,
+    YEOJU
+}
