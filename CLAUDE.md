@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Gyeonggi Partners** is a civic participation governance platform where citizens and government officials in Gyeonggi Province can discuss regional issues and propose solutions together. Built with Spring Boot 3.5.6, Java 21, PostgreSQL, and Redis.
+**Civil Bridge** is a civic participation governance platform where citizens and government officials in Gyeonggi Province can discuss regional issues and propose solutions together. Built with Spring Boot 3.5.6, Java 21, PostgreSQL, and Redis.
 
 ## Build & Development Commands
 
@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew test
 
 # Run a single test class
-./gradlew test --tests "org.example.gyeonggipartners.domain.user.application.UserServiceTest"
+./gradlew test --tests "org.example.civilbridge.domain.user.application.UserServiceTest"
 
 # Run tests with specific pattern
 ./gradlew test --tests "*ServiceTest"
@@ -316,7 +316,7 @@ public ResponseEntity<?> someMethod(
 
 ### Test Structure
 ```
-src/test/java/org/example/gyeonggi_partners/
+src/test/java/org/example/civilbridge/
 └── domain/
     ├── user/
     │   ├── application/
