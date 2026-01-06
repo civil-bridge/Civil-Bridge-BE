@@ -5,7 +5,9 @@
       "Bash(git add:*)",
       "Bash(./gradlew build:*)",
       "Bash(./gradlew test:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(find:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: Claude 설정 파일 재구성\n\n- COMMIT_CONVENTION.md를 commands/commit-push.md로 이동\n- code-reviewer.md를 commands/rename-project.md로 이동\n- commit-guide.md 문서 추가\n- Bash find 명령어 자동 승인 추가\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []
