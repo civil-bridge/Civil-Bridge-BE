@@ -3,8 +3,8 @@ version: '3.8'
 services:
   # Spring Boot 애플리케이션
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/gyeonggi-partners:dev
-    container_name: gyeonggi-partners-app
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/civil-bridge:dev
+    container_name: civil-bridge-app
     ports:
       - "8080:8080"
     environment:
@@ -29,7 +29,7 @@ services:
   # PostgreSQL DB
   postgres:
     image: postgres:15-alpine # 가벼운 alpine 버전의 postgres 15 이미지 사용
-    container_name: gyeonggi-partners-postgres
+    container_name: civil-bridge-postgres
     ports:
       - "5432:5432" # 외부에서 DB에 접속할 수 있도록 포트 매핑
     environment:
@@ -45,7 +45,7 @@ services:
   # Redis
   redis:
     image: redis:7.4-alpine
-    container_name: gyeonggi-partners-redis
+    container_name: civil-bridge-redis
     ports:
       - "6379:6379"
     volumes:

@@ -8,11 +8,11 @@ services:
     image: postgres:15
 
     # 컨테이너의 이름을 지정합니다. (없어도 무방)
-    container_name: gyeonggi-partners-db
+    container_name: civil-bridge-db
 
     # 환경 변수를 설정하는 부분입니다. PostgreSQL 이미지가 이 값을 읽어 DB를 자동 생성합니다.
     environment:
-      POSTGRES_DB: gyeonggi_partners_db        # 생성할 데이터베이스 이름
+      POSTGRES_DB: civil_bridge_db        # 생성할 데이터베이스 이름
       POSTGRES_USER: postgres   # 생성할 사용자 이름
       POSTGRES_PASSWORD: postgres # 해당 사용자의 비밀번호
 
@@ -35,7 +35,7 @@ services:
     image: redis:7.4-alpine
 
     # 컨테이너의 이름을 지정합니다.
-    container_name: gyeonggi-partners-redis
+    container_name: civil-bridge-redis
 
     # 포트 포워딩 설정입니다. Redis의 기본 포트는 6379입니다.
     # 내 컴퓨터의 6379 포트로 오는 요청을 컨테이너의 6379 포트로 전달합니다.
@@ -57,7 +57,7 @@ services:
     image: sonarqube:latest
 
     # 컨테이너의 이름을 지정합니다.
-    container_name: gyeonggi-partners-sonarqube
+    container_name: civil-bridge-sonarqube
 
     # 환경 변수를 설정하는 부분입니다. Elasticsearch 부트스트랩 체크를 비활성화합니다.
     environment:
