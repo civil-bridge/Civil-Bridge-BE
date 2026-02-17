@@ -60,7 +60,7 @@ logs/
 *~
 
 ### Docker 데이터 ###
-postgres-data/
+mysql-data/
 redis-data/
 docker-compose.override.yml
 .env

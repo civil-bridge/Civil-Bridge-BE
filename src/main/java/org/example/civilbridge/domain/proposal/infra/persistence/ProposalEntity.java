@@ -38,11 +38,11 @@ public class ProposalEntity extends BaseEntity {
     private SubmitStatus status;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "consents", columnDefinition = "jsonb")
+    @Column(name = "consents", columnDefinition = "json")
     private List<Consenter> consents;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "contents", columnDefinition = "jsonb")
+    @Column(name = "contents", columnDefinition = "json")
     private ContentFormat contents;
     private LocalDateTime deadline;
 

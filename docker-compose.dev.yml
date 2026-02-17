@@ -20,24 +20,25 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
-      - postgres
+      - mysql
       - redis
     restart: unless-stopped
     networks:
       - app-network
 
-  # PostgreSQL DB
-  postgres:
-    image: postgres:15-alpine # 가벼운 alpine 버전의 postgres 15 이미지 사용
-    container_name: civil-bridge-postgres
+  # MySQL DB
+  mysql:
+    image: mysql:8.0
+    container_name: civil-bridge-mysql
     ports:
-      - "5432:5432" # 외부에서 DB에 접속할 수 있도록 포트 매핑
+      - "3306:3306" # 외부에서 DB에 접속할 수 있도록 포트 매핑
     environment:
-      POSTGRES_USER: ${DB_USERNAME} # app 서비스에서 사용할 DB 사용자 이름
-      POSTGRES_PASSWORD: ${DB_PASSWORD} # app 서비스에서 사용할 DB 비밀번호
-      POSTGRES_DB: ${DB_NAME} # app 서비스에서 사용할 데이터베이스 이름
+      MYSQL_USER: ${DB_USERNAME} # app 서비스에서 사용할 DB 사용자 이름
+      MYSQL_PASSWORD: ${DB_PASSWORD} # app 서비스에서 사용할 DB 비밀번호
+      MYSQL_DATABASE: ${DB_NAME} # app 서비스에서 사용할 데이터베이스 이름
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} # root 비밀번호
     volumes:
-      - postgres-data:/var/lib/postgresql/data # 데이터 영속성을 위한 볼륨 설정
+      - mysql-data:/var/lib/mysql # 데이터 영속성을 위한 볼륨 설정
     restart: unless-stopped
     networks:
       - app-network
@@ -55,7 +56,7 @@ services:
       - app-network
 
 volumes:
-  postgres-data:
+  mysql-data:
   redis-data:
 
 networks:
