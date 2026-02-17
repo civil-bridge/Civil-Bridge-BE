@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.civilbridge.domain.discussionRoom.domain.model.AccessLevel;
-import org.example.civilbridge.domain.discussionRoom.domain.model.Region;
 
 @Getter
 @Schema(description = "논의방 생성 요청")
@@ -24,10 +23,13 @@ public class CreateDiscussionRoomReq {
     @Schema(description = "논의방 설명", example = "현재 부천시 BJ로 인한 .... 등의 내용설명")
     String description;
 
-    @NotNull
-    @Schema(description = "문제발생 지역", example = "POCHEON")
-    Region region;
+    @NotBlank(message = "시/군은 필수입니다.")
+    @Schema(description = "시/군", example = "부천시")
+    String city;
 
+    @NotBlank(message = "구/동은 필수입니다.")
+    @Schema(description = "구/동", example = "원미구")
+    String district;
 
     @NotNull
     @Schema(description = "방 입장조건", example = "PUBLIC")

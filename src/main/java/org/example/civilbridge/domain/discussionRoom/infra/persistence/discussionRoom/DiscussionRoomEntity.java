@@ -8,9 +8,6 @@ import lombok.NoArgsConstructor;
 import org.example.civilbridge.domain.common.BaseEntity;
 import org.example.civilbridge.domain.discussionRoom.domain.model.AccessLevel;
 import org.example.civilbridge.domain.discussionRoom.domain.model.DiscussionRoom;
-import org.example.civilbridge.domain.discussionRoom.domain.model.Region;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * DiscussionRoom JPA 엔티티
@@ -33,14 +30,14 @@ public class DiscussionRoomEntity extends BaseEntity {
     @Column(name = "description")
     private String description;
 
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Enumerated(EnumType.STRING)
-    @Column(name = "region", nullable = false, columnDefinition = "region_enum") // DB의 ENUM 타입 이름 명시
-    private Region region;
+    @Column(name = "city", nullable = false, length = 50)
+    private String city;
 
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "district", nullable = false, length = 50)
+    private String district;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "access_level", nullable = false, columnDefinition = "access_level_enum") // DB의 ENUM 타입 이름 명시
+    @Column(name = "access_level", nullable = false)
     private AccessLevel accessLevel;
 
     @Version
@@ -50,11 +47,12 @@ public class DiscussionRoomEntity extends BaseEntity {
 
     @Builder
     private DiscussionRoomEntity(Long id, String title, String description,
-                                 Region region, AccessLevel accessLevel) {
+                                 String city, String district, AccessLevel accessLevel) {
         this.id = id;
         this.title = title;
         this.description = description;
-        this.region = region;
+        this.city = city;
+        this.district = district;
         this.accessLevel = accessLevel;
     }
 
@@ -66,7 +64,8 @@ public class DiscussionRoomEntity extends BaseEntity {
                 .id(discussionRoom.getId())
                 .title(discussionRoom.getTitle())
                 .description(discussionRoom.getDescription())
-                .region(discussionRoom.getRegion())
+                .city(discussionRoom.getCity())
+                .district(discussionRoom.getDistrict())
                 .accessLevel(discussionRoom.getAccessLevel())
                 .build();
     }
@@ -79,7 +78,8 @@ public class DiscussionRoomEntity extends BaseEntity {
                 this.id,
                 this.title,
                 this.description,
-                this.region,
+                this.city,
+                this.district,
                 this.accessLevel,
                 this.getCreatedAt(),
                 this.getUpdatedAt(),

@@ -17,28 +17,31 @@ public class DiscussionRoom {
 
     private static final int MAX_TITLE_LENGTH = 100;
     private static final int MAX_DESCRIPTION_LENGTH = 255;
-    private static final String REGION_REQUIRED_MESSAGE = "지역은 반드시 입력해야합니다.";
+    private static final String CITY_REQUIRED_MESSAGE = "시/군은 반드시 입력해야합니다.";
+    private static final String DISTRICT_REQUIRED_MESSAGE = "구/동은 반드시 입력해야합니다.";
     private static final String ACCESS_LEVEL_REQUIRED_MESSAGE = "입장 조건은 반드시 입력해야합니다.";
 
 
     private Long id;
     private String title;           // 논의방 제목
     private String description;     // 논의방 설명
-    private Region region;          // 지역 (Region ENUM)
-    private AccessLevel accessLevel;     // 접근 권한 (AccessLevel ENUM)// 참여 인원 수
+    private String city;            // 시/군
+    private String district;        // 구/동
+    private AccessLevel accessLevel;     // 접근 권한 (AccessLevel ENUM)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
 
     @Builder(access = lombok.AccessLevel.PRIVATE)
     private DiscussionRoom(Long id, String title, String description,
-                           Region region, AccessLevel accessLevel,
+                           String city, String district, AccessLevel accessLevel,
                            LocalDateTime createdAt, LocalDateTime updatedAt,
                            LocalDateTime deletedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
-        this.region = region;
+        this.city = city;
+        this.district = district;
         this.accessLevel = accessLevel;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -49,17 +52,19 @@ public class DiscussionRoom {
      * 새로운 논의방 생성
      */
     public static DiscussionRoom create(String title, String description,
-                                        Region region, AccessLevel accessLevel) {
+                                        String city, String district, AccessLevel accessLevel) {
         validateTitle(title);
         validateDescription(description);
-        validateRegion(region);
+        validateCity(city);
+        validateDistrict(district);
         validateAccessLevel(accessLevel);
 
         return DiscussionRoom.builder()
                 .title(title)
                 .description(description)
-                .region(region)
-                .accessLevel(accessLevel)// 생성자가 첫 멤버
+                .city(city)
+                .district(district)
+                .accessLevel(accessLevel)
                 .createdAt(LocalDateTime.now())
                 .build();
     }
@@ -68,14 +73,15 @@ public class DiscussionRoom {
      * 기존 논의방 복원 (DB에서 조회)
      */
     public static DiscussionRoom restore(Long id, String title, String description,
-                                         Region region, AccessLevel accessLevel,
+                                         String city, String district, AccessLevel accessLevel,
                                          LocalDateTime createdAt, LocalDateTime updatedAt,
                                          LocalDateTime deletedAt) {
         return DiscussionRoom.builder()
                 .id(id)
                 .title(title)
                 .description(description)
-                .region(region)
+                .city(city)
+                .district(district)
                 .accessLevel(accessLevel)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
@@ -103,11 +109,16 @@ public class DiscussionRoom {
         }
     }
 
-    private static void validateRegion(Region region) {
-        if (region == null) {
-            throw new IllegalArgumentException(REGION_REQUIRED_MESSAGE);
+    private static void validateCity(String city) {
+        if (city == null || city.isBlank()) {
+            throw new IllegalArgumentException(CITY_REQUIRED_MESSAGE);
         }
+    }
 
+    private static void validateDistrict(String district) {
+        if (district == null || district.isBlank()) {
+            throw new IllegalArgumentException(DISTRICT_REQUIRED_MESSAGE);
+        }
     }
 
     private static void validateAccessLevel(AccessLevel accessLevel) {

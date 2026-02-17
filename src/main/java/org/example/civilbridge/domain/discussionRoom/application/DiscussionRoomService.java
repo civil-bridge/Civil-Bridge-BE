@@ -51,7 +51,8 @@ public class DiscussionRoomService {
         DiscussionRoom room = DiscussionRoom.create(
             request.getTitle(),
             request.getDescription(),
-            request.getRegion(),
+            request.getCity(),
+            request.getDistrict(),
             request.getAccessLevel()
         );
 
