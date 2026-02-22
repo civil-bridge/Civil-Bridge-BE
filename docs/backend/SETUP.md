@@ -13,12 +13,12 @@
 
 > ⚠️ **중요**: `application-local.properties`는 개인 로컬 환경 설정 파일로, `.gitignore`에 포함되어 Git에 올라가지 않습니다. 따라서 **반드시 직접 생성**해야 합니다.
 
-## 2. 프로젝트 클론 
+## 2. 프로젝트 클론
 
-> git clone "https://github.com/NiceLeeMan/gyeonggi_partners"
+> git clone "https://github.com/NiceLeeMan/civil_bridge"
 
 ## 3. 도커 실행하기
-- **프로젝트 루트로 이동**: cd gyeonggi_partners 
+- **프로젝트 루트로 이동**: cd civil_bridge 
 - **도커 컨테이너 실행**: docker-compose up -d
 - **컨테이너 실행 확인**: docker-compose ps
 - **컨테이너 완전 종료**: docker-compose down -v

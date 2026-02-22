@@ -58,7 +58,7 @@
   - 오픈소스 & 무료
 - **연결 정보**:
   - 드라이버: `org.postgresql:postgresql` (runtime)
-  - URL: `jdbc:postgresql://localhost:5433/gyeonggi_partners_db`
+  - URL: `jdbc:postgresql://localhost:5433/civil_bridge_db`
 
 ### Spring Data JPA
 - **용도**: ORM (Object-Relational Mapping)
@@ -177,7 +177,7 @@
   - HTTP와 달리 지속적인 연결 유지
   - 서버 → 클라이언트 푸시 가능
   - 낮은 지연시간 (채팅에 적합)
-- **엔드포인트**: `/gyeonggi_partners-chat`
+- **엔드포인트**: `/civil_bridge-chat`
 - **폴백**: SockJS (WebSocket 미지원 브라우저 대응)
 
 ### STOMP (Simple Text Oriented Messaging Protocol)
@@ -261,12 +261,12 @@
 - **컨테이너**:
   1. **PostgreSQL**:
      - 이미지: `postgres:15`
-     - 컨테이너명: `gyeonggi-partners-db`
+     - 컨테이너명: `civil-bridge-db`
      - 포트: `5433:5432`
      - 볼륨: `./postgres-data:/var/lib/postgresql/data`
   2. **Redis**:
      - 이미지: `redis:7.4-alpine`
-     - 컨테이너명: `gyeonggi-partners-redis`
+     - 컨테이너명: `civil-bridge-redis`
      - 포트: `6380:6379`
      - 볼륨: `./redis-data:/data`
 - **실행 명령**: `docker-compose up -d`

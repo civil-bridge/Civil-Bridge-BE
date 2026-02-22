@@ -2,7 +2,7 @@
 <configuration>
     <!-- 프로퍼티 설정 -->
     <property name="LOG_PATH" value="logs"/>
-    <property name="LOG_FILE_NAME" value="gyeonggi-partners"/>
+    <property name="LOG_FILE_NAME" value="civil-bridge"/>
     
     <!-- 콘솔 출력 패턴 -->
     <property name="CONSOLE_LOG_PATTERN"

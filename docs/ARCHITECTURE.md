@@ -59,7 +59,7 @@
 각 도메인은 4개의 레이어로 구성됩니다:
 
 ```
-src/main/java/org/example/gyeonggi_partners/
+src/main/java/org/example/civilbridge/
 └── domain/
     └── {domain-name}/
         ├── api/                    # 🔵 Presentation Layer
@@ -430,7 +430,7 @@ domain/
 
 #### PostgreSQL (주 저장소)
 ```
-gyeonggi_partners_db
+civil_bridge_db
 ├── users               # 사용자 테이블
 ├── discussion_rooms    # 논의방 테이블
 ├── members             # 논의방 멤버 테이블
@@ -511,7 +511,7 @@ Client A → Server 1 → Redis Publish → "chatChannel"
 
 #### STOMP Protocol
 ```
-WebSocket Endpoint: /gyeonggi_partners-chat
+WebSocket Endpoint: /civil_bridge-chat
 Protocol: STOMP over SockJS
 
 Client → Server:
@@ -524,7 +524,7 @@ Server → Client:
 
 #### 메시지 흐름
 ```
-1. Client: WebSocket 연결 (/gyeonggi_partners-chat)
+1. Client: WebSocket 연결 (/civil_bridge-chat)
 2. Client: 구독 (/topic/room/1)
 3. Client: 메시지 전송 (/app/chat.sendMessage)
 4. Server: MessageController.sendMessage()
@@ -544,7 +544,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // WebSocket 엔드포인트 등록
-        registry.addEndpoint("/gyeonggi_partners-chat")
+        registry.addEndpoint("/civil_bridge-chat")
                 .withSockJS();  // SockJS 폴백 지원
     }
 
@@ -864,7 +864,7 @@ public class GlobalExceptionHandler {
 ## 디렉토리 구조 요약
 
 ```
-src/main/java/org/example/gyeonggi_partners/
+src/main/java/org/example/civilbridge/
 ├── common/                          # 공통 모듈
 │   ├── dto/                         # 공통 DTO (ApiResponse, ErrorResponse)
 │   ├── exception/                   # 예외 인프라

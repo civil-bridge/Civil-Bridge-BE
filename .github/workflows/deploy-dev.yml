@@ -63,7 +63,7 @@ jobs:
           context: . # Dockerfile이 있는 위치 (프로젝트 루트)
           push: true # 빌드 후 이미지를 푸시할지 여부
           # 이미지 태그(이름) 설정. 위에서 변환한 소문자 이름을 사용합니다.
-          tags: ghcr.io/${{ steps.string_utils.outputs.lowercase }}/gyeonggi-partners:dev
+          tags: ghcr.io/${{ steps.string_utils.outputs.lowercase }}/civil-bridge:dev
 
       # 5. EC2 서버에 docker-compose.dev.yml 파일 복사
       # 배포에 필요한 docker-compose 파일을 EC2 서버의 지정된 경로로 전송합니다.
@@ -75,7 +75,7 @@ jobs:
           username: ubuntu # EC2 접속 계정
           key: ${{ secrets.EC2_SSH_KEY }} # EC2 접속용 Private Key
           source: "docker-compose.dev.yml" # 리포지토리에 있는 원본 파일
-          target: "~/gyeonggi_partners" # 서버에 복사될 위치
+          target: "~/civil_bridge" # 서버에 복사될 위치
 
       # 6. EC2 서버에 접속하여 배포 스크립트 실행
       # SSH로 EC2 서버에 원격 접속하여, 애플리케이션을 실행시키는 명령어들을 순차적으로 실행합니다.
@@ -88,7 +88,7 @@ jobs:
           # EC2 서버에서 실행될 스크립트 내용
           script: |
             # 프로젝트 디렉토리로 이동합니다.
-            cd ~/gyeonggi_partners
+            cd ~/civil_bridge
             
             # EC2 서버가 GHCR에서 private 이미지를 내려받을 수 있도록 로그인합니다.
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
