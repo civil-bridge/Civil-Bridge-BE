@@ -78,7 +78,7 @@ CREATE TABLE proposals
     contents          JSON              NOT NULL,
     required_consents INTEGER           NOT NULL DEFAULT 1,
     consent_deadline  DATETIME,
-    status            ENUM('DRAFTING', 'SAVING', 'PENDING_CONSENT', 'CONSENT_FAILED', 'READY_TO_SUBMIT', 'SUBMITTED') NOT NULL DEFAULT 'DRAFTING',
+    status            VARCHAR(30)       NOT NULL DEFAULT 'UNSUBMITTABLE',
     consents          JSON,
     version           BIGINT            NOT NULL DEFAULT 1,
     created_at        DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,

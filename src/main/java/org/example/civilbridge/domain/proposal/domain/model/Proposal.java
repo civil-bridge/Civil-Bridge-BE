@@ -25,14 +25,16 @@ public class Proposal {
     // Id - 제안서, 논의방, 작성자
     private Long id;
     private Long roomId;
+    private Long authorId;
     // 제안서 - 제목, 내용
     private String title;
     private ContentFormat contents;
 
-    // 제출 - 제출 상태, 동의자 목록, 마감 날짜
+    // 제출 - 제출 상태, 동의자 목록, 마감 날짜, 필요 동의 수
     private SubmitStatus status;
     private List<Consenter> consents;
     private LocalDateTime deadline;
+    private int requiredConsents;
 
     // 날짜 - 생성, 수정, 삭제
     private LocalDateTime createdAt;
@@ -40,16 +42,18 @@ public class Proposal {
     private LocalDateTime deletedAt;
 
 
-    public static Proposal create(Long roomId,String title, ContentFormat contents) {
+    public static Proposal create(Long roomId, Long authorId, String title, ContentFormat contents) {
 
         validateTitle(title);
 
         return  Proposal.builder()
                 .roomId(roomId)
+                .authorId(authorId)
                 .title(title)
                 .contents(contents)
                 .status(SubmitStatus.UNSUBMITTABLE)
                 .consents(new ArrayList<>())
+                .requiredConsents(SUBMISSION_MIN_CONSENTS_COUNT)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -91,7 +95,7 @@ public class Proposal {
 
         int consentCount = this.consents != null ? this.consents.size() : 0;
 
-        if (consentCount >= SUBMISSION_MIN_CONSENTS_COUNT) {
+        if (consentCount >= this.requiredConsents) {
             this.status = SubmitStatus.SUBMITTABLE;
         } else {
             this.status = SubmitStatus.UNSUBMITTABLE;
@@ -154,23 +158,26 @@ public class Proposal {
 
         if (LocalDateTime.now().isBefore(deadline)) {
 
-            if (consents.size() >= SUBMISSION_MIN_CONSENTS_COUNT) {
+            if (consents.size() >= this.requiredConsents) {
                 this.status = SubmitStatus.SUBMITTABLE;
             }
         }
     }
 
-    public static Proposal restore(Long id, Long roomId, String title, ContentFormat contents,
-                            List<Consenter> consents, SubmitStatus status, LocalDateTime deadline, LocalDateTime createdAt,
+    public static Proposal restore(Long id, Long roomId, Long authorId, String title, ContentFormat contents,
+                            List<Consenter> consents, SubmitStatus status, LocalDateTime deadline,
+                            int requiredConsents, LocalDateTime createdAt,
                             LocalDateTime updatedAt, LocalDateTime deletedAt) {
         return Proposal.builder()
                 .id(id)
                 .roomId(roomId)
+                .authorId(authorId)
                 .title(title)
                 .contents(contents)
                 .consents(consents)
                 .status(status)
                 .deadline(deadline)
+                .requiredConsents(requiredConsents)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .deletedAt(deletedAt)

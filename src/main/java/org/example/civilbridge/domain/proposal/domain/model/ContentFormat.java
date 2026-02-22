@@ -18,6 +18,10 @@ public class ContentFormat {
     private String expectedEffect;
 
 
+    private ContentFormat() {
+        // Jackson JSON 역직렬화용
+    }
+
     private ContentFormat(String paragraph, String image, String solution, String expectedEffect) {
         validateContentFormat(paragraph);
 

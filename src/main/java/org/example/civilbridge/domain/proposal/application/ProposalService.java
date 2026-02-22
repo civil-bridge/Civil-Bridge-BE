@@ -48,7 +48,7 @@ public class ProposalService {
                 request.getExpectedEffect()
         );
 
-        Proposal proposal = Proposal.create(request.getRoomId(), request.getTitle(), contents);
+        Proposal proposal = Proposal.create(request.getRoomId(), userId, request.getTitle(), contents);
 
         Proposal saved = proposalRepository.save(proposal);
 
