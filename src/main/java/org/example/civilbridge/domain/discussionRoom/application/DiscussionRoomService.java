@@ -94,8 +94,8 @@ public class DiscussionRoomService {
             throw new BusinessException(DiscussionRoomErrorCode.ALREADY_JOINED_ROOM);
         }
 
-        // 2. 방 정보 조회 (캐시 미스 시 DB 조회 후 캐싱)
-        DiscussionRoomCacheModel cachedRoom = cacheRepository.retrieveCachingRoom(roomId)
+        // 2. 방 존재 확인 (캐시 미스 시 DB 조회 후 캐싱)
+        cacheRepository.retrieveCachingRoom(roomId)
                 .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
 
         // 3. DB에 멤버 추가
@@ -103,18 +103,22 @@ public class DiscussionRoomService {
         memberRepository.save(member);
         log.debug("멤버 추가 완료 - userId: {}, roomId: {}", userId, roomId);
 
-        // 4. Redis 업데이트
+        // 4. Redis 업데이트 (currentUsers HINCRBY +1)
         cacheRepository.addUserToRoom(userId, roomId, System.currentTimeMillis());
         log.debug("Redis 업데이트 완료 - roomId: {}", roomId);
 
-        // 5. 멤버 목록 조회
+        // 5. 갱신된 방 정보 다시 조회 (currentUsers 반영)
+        DiscussionRoomCacheModel updatedRoom = cacheRepository.retrieveCachingRoom(roomId)
+                .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
+
+        // 6. 멤버 목록 조회
         List<Long> memberIds = cacheRepository.retrieveRoomMembers(roomId);
 
-        // 6. 멤버 ID를 닉네임으로 변환 (추가된 부분)
+        // 7. 멤버 ID를 닉네임으로 변환
         List<String> memberNicknames = getNicknamesFromIds(memberIds);
 
         log.info("논의방 입장 성공 - userId: {}, roomId: {}", userId, roomId);
-        return JoinRoomRes.of(cachedRoom, memberNicknames); // 수정된 부분
+        return JoinRoomRes.of(updatedRoom, memberNicknames);
     }
 
 
