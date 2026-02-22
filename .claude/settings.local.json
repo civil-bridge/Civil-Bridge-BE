@@ -12,7 +12,12 @@
       "Bash(netstat:*)",
       "Bash(docker-compose up:*)",
       "Bash(./gradlew bootRun:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(docker exec:*)",
+      "Bash(xxd:*)",
+      "Bash(curl:*)",
+      "Bash(./gradlew compileJava:*)",
+      "Bash(./gradlew flywayClean:*)"
     ],
     "deny": [],
     "ask": []
