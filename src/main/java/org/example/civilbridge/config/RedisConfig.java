@@ -43,8 +43,8 @@ public class RedisConfig {
 
         // Hash Key도 String으로 직렬화
         template.setHashKeySerializer(new StringRedisSerializer());
-        // Hash Value도 JSON으로 직렬화
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        // Hash Value도 String으로 직렬화 (toRedisHash()에서 이미 String 변환 완료, HINCRBY 호환)
+        template.setHashValueSerializer(new StringRedisSerializer());
 
         template.afterPropertiesSet();
         return template;
