@@ -18,18 +18,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     /**
-     * RedisTemplate 빈 설정
-     * 
-     * <p>이 설정이 없으면 기본 Java 직렬화를 사용하여 데이터가 이진 형태로 저장됩니다.
-     * JSON 직렬화를 설정하여 Redis CLI에서 데이터 확인 및 디버깅이 용이하도록 합니다.</p>
-     * 
-     * <ul>
-     *   <li>Key: String 형식 (예: "user:1")</li>
-     *   <li>Value: JSON 형식 (예: {"id":1,"name":"홍길동"})</li>
-     * </ul>
-     *
-     * @param connectionFactory Redis 연결 팩토리
-     * @return JSON 직렬화가 설정된 RedisTemplate
+     * Redis 데이터 직렬화 설정
+     * 이 설정이 없으면 데이터가 이진 형태로 저장되어 Redis CLI에서 확인/디버깅 불가
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -50,9 +40,20 @@ public class RedisConfig {
         return template;
     }
 
+    /**
+     * 채팅 메시지가 오가는 Redis 채널 정의
+     * 이 설정이 없으면 메시지를 어느 채널로 발행/구독할지 몰라 실시간 채팅 불가
+     */
     @Bean
-    // Redis의 sub/pub 메세지 처리를 담당하는 리스너 컨테이너
-    // 지정 채널을 비동기적으로 리스닝하고, 메세지 도착시 등록된 리스너에게 전달, 스레드 관리와 메시지 디스패칭 자동 처리
+    public ChannelTopic channelTopic() {
+        return new ChannelTopic("chatChannel");
+    }
+
+    /**
+     * Redis 메시지 수신 시 처리할 메서드 연결
+     * 이 설정이 없으면 메시지가 도착해도 누가 처리할지 몰라 수신 불가
+     */
+    @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             MessageListenerAdapter listenerAdapter,
@@ -65,9 +66,11 @@ public class RedisConfig {
         return container;
     }
 
+    /**
+     * Redis 채널 실시간 리스닝 설정
+     * 이 설정이 없으면 채널을 아무도 감시하지 않아 메시지 수신 자체가 불가
+     */
     @Bean
-    // 실제 메세지를 처리할 subbscriber를 위한 어댑터
-    // subscriber 클래스와 해당 클래스의 handleMessage 메서드를 지정하여 호출
     public MessageListenerAdapter messageListenerAdapter(
             RedisSubscriber subcriber,
             RedisTemplate<String, Object> redisTemplate
@@ -78,10 +81,5 @@ public class RedisConfig {
         return adapter;
     }
 
-    // sub/pub 채널을 정의, 모든 채팅 메세지는 해당 채널을 통해 발행/구독됨
-    @Bean
-    public ChannelTopic channelTopic() {
-        return new ChannelTopic("chatChannel");
-    }
 
 }
