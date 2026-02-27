@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    participant Boot as SpringApplication
+    participant WSC as WebSocketConfig
+    participant RC as RedisConfig
+    participant Broker as In-Memory STOMP Broker
+    participant SockJS as SockJS Handler
+    participant RML as RedisMessageListenerContainer
+    participant MLA as MessageListenerAdapter
+    participant RS as RedisSubscriber
+    participant RT as RedisTemplate
+    participant CT as ChannelTopic(chatChannel)
+
+    Boot->>WSC: @Configuration 빈 초기화
+    Note over WSC: @EnableWebSocketMessageBroker 활성화
+
+    WSC->>SockJS: registerStompEndpoints(registry)
+    Note over SockJS: /gyeonggi_partners-chat 엔드포인트 등록 (SockJS 폴백 포함)
+
+    WSC->>Broker: enableSimpleBroker("/topic")
+    Note over Broker: /topic/** 구독자에게 메시지 브로드캐스트 담당
+
+    WSC->>Broker: setApplicationDestinationPrefixes("/app")
+    Note over Broker: /app/** 를 @MessageMapping 핸들러로 라우팅
+
+    Boot->>RC: @Configuration 빈 초기화
+
+    RC->>RT: redisTemplate(RedisConnectionFactory)
+    Note over RT: Key=StringRedisSerializer, Value=GenericJackson2JsonRedisSerializer
+
+    RC->>CT: channelTopic()
+    Note over CT: 모든 채팅 메시지가 오가는 단일 Redis 채널
+
+    RC->>MLA: messageListenerAdapter(RedisSubscriber)
+    Note over MLA: handleMessage() 연결, StringRedisSerializer로 역직렬화
+
+    RC->>RML: redisMessageListenerContainer(connectionFactory, listenerAdapter, channelTopic)
+    Note over RML: chatChannel 비동기 리스닝 시작
