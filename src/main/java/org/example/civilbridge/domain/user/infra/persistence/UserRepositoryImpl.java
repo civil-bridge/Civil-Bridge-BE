@@ -3,12 +3,11 @@ package org.example.civilbridge.domain.user.infra.persistence;
 import lombok.RequiredArgsConstructor;
 import org.example.civilbridge.domain.user.domain.model.User;
 import org.example.civilbridge.domain.user.domain.repository.UserRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * UserRepository 구현체
@@ -61,9 +60,14 @@ public class UserRepositoryImpl implements UserRepository {
 
 
     @Override
-    public List<String> findNicknamesByIds(List<Long> ids) { // 구현 추가
+    public List<String> findNicknamesByIds(List<Long> ids) {
         return userJpaRepository.findNicknameByIdIn(ids);
     }
 
-
+    @Override
+    public List<User> findAllByIdIn(List<Long> ids) {
+        return userJpaRepository.findAllByIdIn(ids).stream()
+                .map(UserEntity::toDomain)
+                .collect(Collectors.toList());
+    }
 }

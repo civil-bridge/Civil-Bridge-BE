@@ -38,13 +38,13 @@ public class JoinRoomRes {
     @Schema(description = "현재 멤버 수", example = "15")
     private Integer currentUsers;
 
-    @Schema(description = "멤버 닉네임 리스트")
-    private List<String> memberNicknames;
+    @Schema(description = "멤버 목록")
+    private List<MemberInfo> members;
 
     @Schema(description = "입장 시각", example = "2025-11-08T14:30:00")
     private LocalDateTime joinedAt;
 
-    public static JoinRoomRes of(DiscussionRoomCacheModel cached,List<String> memberNicknames) {
+    public static JoinRoomRes of(DiscussionRoomCacheModel cached, List<MemberInfo> members) {
         return JoinRoomRes.builder()
                 .roomId(cached.getId())
                 .title(cached.getTitle())
@@ -53,7 +53,7 @@ public class JoinRoomRes {
                 .district(cached.getDistrict())
                 .accessLevel(cached.getAccessLevel())
                 .currentUsers(cached.getCurrentUsers())
-                .memberNicknames(memberNicknames)
+                .members(members)
                 .joinedAt(LocalDateTime.now())
                 .build();
     }

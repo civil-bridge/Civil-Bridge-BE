@@ -46,6 +46,8 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
     @Query("SELECT u.nickname FROM UserEntity u WHERE u.id IN :ids")
     List<String> findNicknameByIdIn(@Param("ids") List<Long> ids);
 
-
-
+    /**
+     * ID 목록으로 UserEntity 목록 조회
+     */
+    List<UserEntity> findAllByIdIn(List<Long> ids);
 }

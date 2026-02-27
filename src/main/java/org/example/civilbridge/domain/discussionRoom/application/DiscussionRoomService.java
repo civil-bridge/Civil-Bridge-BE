@@ -14,7 +14,9 @@ import org.example.civilbridge.domain.discussionRoom.exception.DiscussionRoomErr
 import org.example.civilbridge.domain.discussionRoom.infra.cache.DiscussionRoomCacheRepository;
 import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionRoomCacheModel;
 import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionRoomsPage;
+import org.example.civilbridge.domain.user.domain.model.User;
 import org.example.civilbridge.domain.user.domain.repository.UserRepository;
+import org.example.civilbridge.domain.user.exception.UserErrorCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -61,8 +63,8 @@ public class DiscussionRoomService {
         log.debug("DB 저장 완료 - roomId: {}", savedRoom.getId());
         
         // 3. 생성자를 멤버로 추가 (방장은 자동으로 참여)
-        Member creator = Member.join(userId, savedRoom.getId());
-        memberRepository.save(creator);
+        Member creatorMember = Member.join(userId, savedRoom.getId());
+        memberRepository.save(creatorMember);
         log.debug("생성자 멤버 추가 완료 - userId: {}, roomId: {}", userId, savedRoom.getId());
         
         // 4. Redis 캐싱 (Write-Through 전략)
@@ -70,28 +72,33 @@ public class DiscussionRoomService {
         cacheRepository.saveNewRoomToRedis(model, userId, System.currentTimeMillis());
 
         log.debug("Redis 캐싱 완료 - roomId: {}", savedRoom.getId());
-        
-        // 5. 멤버 목록 조회 (현재는 생성자만 존재)
-        List<Long> memberIds = List.of(userId);
 
-        // 6. 멤버 ID를 닉네임으로 변환 (추가된 부분)
-        List<String> memberNicknames = getNicknamesFromIds(memberIds);
+        // 5. 생성자 정보 조회 후 멤버 목록 구성 (생성자 = 방장)
+        User creator = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
-        // 6. 멤버 ID를 닉네임으로 변환 (User 도메인과의 통합 필요)
+        List<MemberInfo> members = List.of(
+                MemberInfo.builder()
+                        .userId(creator.getId())
+                        .nickname(creator.getNickname())
+                        .role("LEADER")
+                        .profileImageUrl(null)
+                        .build()
+        );
 
-        // 6. JoinRoomRes 반환 (생성 = 입장 완료)
         log.info("논의방 생성 성공 - roomId: {}", savedRoom.getId());
 
-        return JoinRoomRes.of(model, memberNicknames);
+        return JoinRoomRes.of(model, members);
     }
 
     @Transactional
     public JoinRoomRes joinRoom(Long userId, Long roomId) {
         log.info("논의방 입장 요청 - userId: {}, roomId: {}", userId, roomId);
 
-        // 1. 중복 참여 확인
+        // 1. 이미 참여 중인 경우 → 방 정보만 반환 (멱등성 보장)
         if (memberRepository.existsByUserIdAndRoomId(userId, roomId)) {
-            throw new BusinessException(DiscussionRoomErrorCode.ALREADY_JOINED_ROOM);
+            log.info("이미 참여 중인 논의방 재입장 - userId: {}, roomId: {}", userId, roomId);
+            return buildRoomInfo(roomId);
         }
 
         // 2. 방 존재 확인 (캐시 미스 시 DB 조회 후 캐싱)
@@ -107,18 +114,45 @@ public class DiscussionRoomService {
         cacheRepository.addUserToRoom(userId, roomId, System.currentTimeMillis());
         log.debug("Redis 업데이트 완료 - roomId: {}", roomId);
 
-        // 5. 갱신된 방 정보 다시 조회 (currentUsers 반영)
-        DiscussionRoomCacheModel updatedRoom = cacheRepository.retrieveCachingRoom(roomId)
+        log.info("논의방 입장 성공 - userId: {}, roomId: {}", userId, roomId);
+        return buildRoomInfo(roomId);
+    }
+
+    @Transactional(readOnly = true)
+    public JoinRoomRes getRoomDetail(Long roomId) {
+        log.info("논의방 상세 조회 - roomId: {}", roomId);
+        return buildRoomInfo(roomId);
+    }
+
+    private JoinRoomRes buildRoomInfo(Long roomId) {
+        DiscussionRoomCacheModel room = cacheRepository.retrieveCachingRoom(roomId)
                 .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
 
-        // 6. 멤버 목록 조회
+        // 멤버 ID 목록: Redis 캐시 우선 조회, 캐시 미스 시 DB 폴백
         List<Long> memberIds = cacheRepository.retrieveRoomMembers(roomId);
+        if (memberIds.isEmpty()) {
+            memberIds = memberRepository.findUserIdsByRoomId(roomId);
+        }
 
-        // 7. 멤버 ID를 닉네임으로 변환
-        List<String> memberNicknames = getNicknamesFromIds(memberIds);
+        // 방장 결정: 가장 먼저 참여한 멤버 (DB 기준)
+        Long leaderUserId = memberRepository.findLeaderUserIdByRoomId(roomId).orElse(null);
 
-        log.info("논의방 입장 성공 - userId: {}, roomId: {}", userId, roomId);
-        return JoinRoomRes.of(updatedRoom, memberNicknames);
+        // 유저 정보 일괄 조회 후 MemberInfo 변환
+        List<User> users = userRepository.findAllByIdIn(memberIds);
+        List<MemberInfo> members = buildMemberInfoList(users, leaderUserId);
+
+        return JoinRoomRes.of(room, members);
+    }
+
+    private List<MemberInfo> buildMemberInfoList(List<User> users, Long leaderUserId) {
+        return users.stream()
+                .map(user -> MemberInfo.builder()
+                        .userId(user.getId())
+                        .nickname(user.getNickname())
+                        .role(user.getId().equals(leaderUserId) ? "LEADER" : "PARTICIPANT")
+                        .profileImageUrl(null)
+                        .build())
+                .collect(Collectors.toList());
     }
 
 
@@ -266,18 +300,4 @@ public class DiscussionRoomService {
         log.info("논의방 나가기 성공 - userId: {}, roomId: {}", userId, roomId);
     }
 
-    /**
-     * 사용자 ID 목록을 닉네임 목록으로 변환합니다. (로직 변경)
-     * UserRepository를 사용하여 실제 닉네임을 조회합니다.
-     *
-     * @param memberIds 사용자 ID 목록
-     * @return 닉네임 목록
-     */
-    private List<String> getNicknamesFromIds(List<Long> memberIds) {
-        if (memberIds.isEmpty()) {
-            return List.of();
-        }
-        // UserRepository를 사용하여 ID 목록 기반으로 닉네임 목록을 조회합니다.
-        return userRepository.findNicknamesByIds(memberIds);
-    }
 }

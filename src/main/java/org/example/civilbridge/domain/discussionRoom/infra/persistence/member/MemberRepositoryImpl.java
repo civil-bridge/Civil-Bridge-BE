@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -62,5 +63,17 @@ public class MemberRepositoryImpl implements MemberRepository {
                         MemberJpaRepository.RoomMemberCount::getRoomId,
                         count -> count.getCount().intValue()
                 ));
+    }
+
+    @Override
+    public List<Long> findUserIdsByRoomId(Long roomId) {
+        return memberJpaRepository.findUserIdsByRoomIdOrderByCreatedAt(roomId);
+    }
+
+    @Override
+    public Optional<Long> findLeaderUserIdByRoomId(Long roomId) {
+        return memberJpaRepository.findUserIdsByRoomIdOrderByCreatedAt(roomId)
+                .stream()
+                .findFirst();
     }
 }

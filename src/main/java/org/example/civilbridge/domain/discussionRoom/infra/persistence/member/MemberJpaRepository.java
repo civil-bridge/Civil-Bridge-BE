@@ -50,4 +50,10 @@ public interface MemberJpaRepository extends JpaRepository<MemberEntity, Long> {
         Long getRoomId();
         Long getCount();
     }
+
+    /**
+     * 논의방의 모든 멤버 userId 목록 조회 (참여 시각 오름차순)
+     */
+    @Query("SELECT m.userId FROM MemberEntity m WHERE m.roomId = :roomId ORDER BY m.createdAt ASC")
+    List<Long> findUserIdsByRoomIdOrderByCreatedAt(@Param("roomId") Long roomId);
 }

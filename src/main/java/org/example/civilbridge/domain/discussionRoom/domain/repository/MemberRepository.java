@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Member 도메인 Repository 인터페이스
@@ -56,4 +57,18 @@ public interface MemberRepository {
      * @return roomId를 키로, 멤버 수를 값으로 하는 Map
      */
     Map<Long, Integer> countByRoomIds(List<Long> roomIds);
+
+    /**
+     * 논의방의 모든 멤버 userId 목록 조회 (참여 시각 오름차순)
+     * @param roomId 논의방 ID
+     * @return 참여 시각 순으로 정렬된 사용자 ID 목록
+     */
+    List<Long> findUserIdsByRoomId(Long roomId);
+
+    /**
+     * 논의방 방장(가장 먼저 참여한 멤버) userId 조회
+     * @param roomId 논의방 ID
+     * @return 방장의 사용자 ID (방이 비어있을 경우 empty)
+     */
+    Optional<Long> findLeaderUserIdByRoomId(Long roomId);
 }
