@@ -17,7 +17,8 @@
       "Bash(xxd:*)",
       "Bash(curl:*)",
       "Bash(./gradlew compileJava:*)",
-      "Bash(./gradlew flywayClean:*)"
+      "Bash(./gradlew flywayClean:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
