@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class MessageResponse {
     private Long id; // 커서 페이징용 id
+    private Long userId;
     private String content;
     private String userName;
     private LocalDateTime createdAt;
@@ -17,8 +18,9 @@ public class MessageResponse {
     public static MessageResponse of(MessageEntity messageEntity) {
         return MessageResponse.builder()
                 .id(messageEntity.getId())
+                .userId(messageEntity.getUser().getId())
                 .content(messageEntity.getContent())
-                .userName(messageEntity.getUser().getName())
+                .userName(messageEntity.getUser().getNickname())
                 .createdAt(messageEntity.getCreatedAt())
                 .build();
     }

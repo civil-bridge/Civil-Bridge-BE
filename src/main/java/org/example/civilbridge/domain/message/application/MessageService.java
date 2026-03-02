@@ -75,9 +75,7 @@ public class MessageService {
     }
 
     public void processJoinMessage(MessageRequest request, SimpMessageHeaderAccessor headerAccessor) {
-
-        // 웹소켓 세션에 사용자 id 저장
-        headerAccessor.getSessionAttributes().put("userId",request.getUserId());
+        // userId는 STOMP CONNECT 시점에 JWT로부터 StompChannelInterceptor가 세션에 저장
 
         //메세지 타입이 join인 경우, redis로 발행
         if (request.getType().equals(MessageType.JOIN)) {
