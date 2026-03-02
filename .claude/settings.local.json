@@ -18,7 +18,8 @@
       "Bash(curl:*)",
       "Bash(./gradlew compileJava:*)",
       "Bash(./gradlew flywayClean:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(xargs grep:*)"
     ],
     "deny": [],
     "ask": []
