@@ -1,5 +1,6 @@
 package org.example.civilbridge.domain.proposal.domain.repository;
 
+import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
 
 import java.time.LocalDateTime;
@@ -17,4 +18,6 @@ public interface ProposalRepository {
     List<Proposal> findByRoomId(Long roomId);
 
     int countByRoomId(Long roomId);
+
+    void updateContent(Long proposalId, String title, ContentFormat contents);
 }

@@ -1,6 +1,9 @@
 package org.example.civilbridge.domain.proposal.infra.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
 import org.example.civilbridge.domain.proposal.domain.repository.ProposalRepository;
 import org.springframework.stereotype.Repository;
@@ -14,12 +17,13 @@ import java.util.Optional;
 public class ProposalRepositoryImpl implements ProposalRepository {
 
     private final ProposalJpaRepository proposalJpaRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     public Proposal save(Proposal proposal) {
         ProposalEntity entity = ProposalEntity.fromDomain(proposal);
         ProposalEntity savedEntity = proposalJpaRepository.save(entity);
-        
+
         return savedEntity.toDomain();
     }
 
@@ -47,5 +51,18 @@ public class ProposalRepositoryImpl implements ProposalRepository {
     @Override
     public int countByRoomId(Long roomId) {
         return proposalJpaRepository.countByRoomId(roomId);
+    }
+
+    @Override
+    public void updateContent(Long proposalId, String title, ContentFormat contents) {
+        String contentsJson = null;
+        if (contents != null) {
+            try {
+                contentsJson = objectMapper.writeValueAsString(contents);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException("ContentFormat 직렬화에 실패했습니다.", e);
+            }
+        }
+        proposalJpaRepository.updateContent(proposalId, title, contentsJson, LocalDateTime.now());
     }
 }

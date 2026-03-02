@@ -26,6 +26,9 @@ public class Proposal {
     private Long id;
     private Long roomId;
     private Long authorId;
+
+    // 낙관적 락 버전
+    private Long version;
     // 제안서 - 제목, 내용
     private String title;
     private ContentFormat contents;
@@ -57,6 +60,19 @@ public class Proposal {
                 .createdAt(LocalDateTime.now())
                 .build();
 
+    }
+
+    public static Proposal createBlank(Long roomId, Long authorId) {
+        return Proposal.builder()
+                .roomId(roomId)
+                .authorId(authorId)
+                .title(null)
+                .contents(null)
+                .status(SubmitStatus.UNSUBMITTABLE)
+                .consents(new ArrayList<>())
+                .requiredConsents(SUBMISSION_MIN_CONSENTS_COUNT)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 
 
@@ -166,7 +182,7 @@ public class Proposal {
 
     public static Proposal restore(Long id, Long roomId, Long authorId, String title, ContentFormat contents,
                             List<Consenter> consents, SubmitStatus status, LocalDateTime deadline,
-                            int requiredConsents, LocalDateTime createdAt,
+                            int requiredConsents, Long version, LocalDateTime createdAt,
                             LocalDateTime updatedAt, LocalDateTime deletedAt) {
         return Proposal.builder()
                 .id(id)
@@ -178,6 +194,7 @@ public class Proposal {
                 .status(status)
                 .deadline(deadline)
                 .requiredConsents(requiredConsents)
+                .version(version)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .deletedAt(deletedAt)

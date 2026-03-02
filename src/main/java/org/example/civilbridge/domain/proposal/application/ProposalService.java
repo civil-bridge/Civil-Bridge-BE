@@ -29,28 +29,20 @@ public class ProposalService {
     private final MemberRepository memberRepository;
 
     /**
-     * 제안서 작성
+     * 제안서 작성 (빈 제안서 생성 후 즉시 편집 락 부여)
      */
     public ProposalResponse createProposal(CreateProposalRequest request, Long userId) {
 
         validateRoomMember(request.getRoomId(), userId);
 
-
-        int proposalCount = proposalRepository.countByRoomId(request.getRoomId());
-        if (proposalCount >= 5) {
+        if (proposalRepository.countByRoomId(request.getRoomId()) >= 5) {
             throw new BusinessException(ProposalErrorCode.PROPOSAL_LIMIT_EXCEEDED);
         }
 
-        ContentFormat contents = ContentFormat.of(
-                request.getParagraph(),
-                request.getImage(),
-                request.getSolution(),
-                request.getExpectedEffect()
-        );
+        Proposal saved = proposalRepository.save(Proposal.createBlank(request.getRoomId(), userId));
 
-        Proposal proposal = Proposal.create(request.getRoomId(), userId, request.getTitle(), contents);
-
-        Proposal saved = proposalRepository.save(proposal);
+        // 생성자가 즉시 편집 가능하도록 락 자동 획득
+        lockService.tryLock(saved.getId(), userId);
 
         return ProposalResponse.from(saved);
     }
@@ -88,7 +80,7 @@ public class ProposalService {
 
 
     /**
-     * 제안서 수정
+     * 제안서 수정 (auto-save: @Version 체크 없이 직접 업데이트)
      */
     public ProposalResponse updateProposal(Long proposalId, UpdateProposalRequest request, Long userId) {
 
@@ -102,26 +94,29 @@ public class ProposalService {
         }
 
         Long lockOwner = lockService.getLockOwner(proposalId);
-        if (lockOwner == null || !lockOwner.equals(userId)) {
+        if (lockOwner == null) {
+            throw new BusinessException(ProposalErrorCode.LOCK_NOT_ACQUIRED);
+        }
+        if (!lockOwner.equals(userId)) {
             throw new BusinessException(ProposalErrorCode.PROPOSAL_BEING_EDITED);
         }
 
-
-
-        ContentFormat contents = ContentFormat.of(
+        // Auto-save: null 허용 (미완성 내용도 저장 가능)
+        ContentFormat contents = ContentFormat.ofNullable(
                 request.getParagraph(),
                 request.getImage(),
                 request.getSolution(),
                 request.getExpectedEffect()
         );
 
-        proposal.update(request.getTitle(), contents);
-
-        Proposal updated = proposalRepository.save(proposal);
-
+        // @Version 체크를 우회하는 직접 업데이트 (Redis 락이 단일 작성자를 이미 보장)
+        proposalRepository.updateContent(proposalId, request.getTitle(), contents);
         lockService.renewLock(proposalId, userId);
 
-        return ProposalResponse.from(updated);
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
     }
 
     /**
@@ -133,9 +128,17 @@ public class ProposalService {
 
         validateRoomMember(proposal.getRoomId(), userId);
 
+        // 빈 제안서로 투표 시작 방지
+        if (proposal.getTitle() == null || proposal.getTitle().isBlank()) {
+            throw new BusinessException(ProposalErrorCode.INVALID_TITLE_LENGTH);
+        }
+        if (proposal.getContents() == null || proposal.getContents().getParagraph() == null) {
+            throw new BusinessException(ProposalErrorCode.EMPTY_PROPOSAL_BODY);
+        }
+
         try {
             proposal.startVoting();
-        }catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("이미 투표")) {
                 throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
             } else if (e.getMessage().contains("제출 가능한")) {
@@ -240,10 +243,10 @@ public class ProposalService {
      */
     public void finishEditing(Long proposalId, Long userId) {
 
-        proposalRepository.findById(proposalId)
+        Proposal proposal = proposalRepository.findById(proposalId)
                         .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
 
-        validateRoomMember(proposalId, userId);
+        validateRoomMember(proposal.getRoomId(), userId);
 
         lockService.unlock(proposalId, userId);
     }
