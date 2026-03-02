@@ -128,16 +128,21 @@ public class DiscussionRoomService {
         DiscussionRoomCacheModel room = cacheRepository.retrieveCachingRoom(roomId)
                 .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
 
-        // 멤버 ID 목록: Redis 캐시 우선 조회, 캐시 미스 시 DB 폴백
+        // 멤버 ID 목록: Redis 우선 조회
+        // 단, 캐시 리스트 크기가 실제 인원수(currentUsers)와 다르면 stale 데이터로 간주
+        // → DB에서 전체 재조회 후 Redis 재캐싱
         List<Long> memberIds = cacheRepository.retrieveRoomMembers(roomId);
-        if (memberIds.isEmpty()) {
-            memberIds = memberRepository.findUserIdsByRoomId(roomId);
+        if (memberIds.size() != room.getCurrentUsers()) {
+            log.debug("Redis 멤버 목록 불일치 (cached={}, expected={}) - DB 재조회 및 재캐싱 - roomId: {}",
+                    memberIds.size(), room.getCurrentUsers(), roomId);
+            memberIds = memberRepository.findUserIdsByRoomId(roomId);  // createdAt ASC
+            cacheRepository.cacheRoomMembers(roomId, memberIds);
         }
 
-        // 방장 결정: 가장 먼저 참여한 멤버 (DB 기준)
-        Long leaderUserId = memberRepository.findLeaderUserIdByRoomId(roomId).orElse(null);
+        // 방장: 참여 시각 기준 첫 번째 멤버 (memberIds는 createdAt ASC 순서 보장)
+        Long leaderUserId = memberIds.isEmpty() ? null : memberIds.get(0);
 
-        // 유저 정보 일괄 조회 후 MemberInfo 변환
+        // 유저 정보 일괄 조회 후 MemberInfo 변환 (N+1 방지: IN 쿼리 1회)
         List<User> users = userRepository.findAllByIdIn(memberIds);
         List<MemberInfo> members = buildMemberInfoList(users, leaderUserId);
 
