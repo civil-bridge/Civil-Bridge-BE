@@ -331,7 +331,14 @@ HTTP 201 Created
     "district": "원미구",
     "accessLevel": "PUBLIC",
     "currentUsers": 1,
-    "memberNicknames": ["길동이"],
+    "members": [
+      {
+        "userId": 1,
+        "nickname": "길동이",
+        "role": "LEADER",
+        "profileImageUrl": null
+      }
+    ],
     "joinedAt": "2026-02-25T14:30:00"
   }
 }
@@ -348,7 +355,11 @@ HTTP 201 Created
 | `district` | `string` | 구/동 |
 | `accessLevel` | `string` | 접근 범위 |
 | `currentUsers` | `number` | 현재 참여 인원 수 |
-| `memberNicknames` | `string[]` | 참여 중인 멤버 닉네임 목록 |
+| `members` | `object[]` | 참여 중인 멤버 정보 목록 |
+| `members[].userId` | `number` | 사용자 ID |
+| `members[].nickname` | `string` | 닉네임 |
+| `members[].role` | `string` | 논의방 내 역할 (`LEADER`: 방장, `PARTICIPANT`: 일반 참여자) |
+| `members[].profileImageUrl` | `string \| null` | 프로필 이미지 URL |
 | `joinedAt` | `string` | 입장 시각 (ISO 8601) |
 
 ---
@@ -465,7 +476,10 @@ HTTP 200 OK
     "district": "원미구",
     "accessLevel": "PUBLIC",
     "currentUsers": 16,
-    "memberNicknames": ["길동이", "홍길동", "..."],
+    "members": [
+      { "userId": 1, "nickname": "길동이", "role": "LEADER", "profileImageUrl": null },
+      { "userId": 2, "nickname": "홍길동", "role": "PARTICIPANT", "profileImageUrl": null }
+    ],
     "joinedAt": "2026-02-25T15:00:00"
   }
 }
@@ -509,7 +523,10 @@ HTTP 200 OK
     "district": "원미구",
     "accessLevel": "PUBLIC",
     "currentUsers": 16,
-    "memberNicknames": ["길동이", "홍길동", "..."],
+    "members": [
+      { "userId": 1, "nickname": "길동이", "role": "LEADER", "profileImageUrl": null },
+      { "userId": 2, "nickname": "홍길동", "role": "PARTICIPANT", "profileImageUrl": null }
+    ],
     "joinedAt": "2026-02-25T15:00:00"
   }
 }
@@ -960,14 +977,16 @@ HTTP 200 OK
   "messages": [
     {
       "id": 150,
+      "userId": 3,
       "content": "안녕하세요!",
-      "userName": "홍길동",
+      "userName": "길동이",
       "createdAt": "2026-02-25T14:30:00"
     },
     {
       "id": 149,
+      "userId": 7,
       "content": "반갑습니다.",
-      "userName": "김철수",
+      "userName": "철수짱",
       "createdAt": "2026-02-25T14:29:00"
     }
   ],
@@ -980,8 +999,9 @@ HTTP 200 OK
 |------|------|------|
 | `messages` | `array` | 메시지 목록 (최신순) |
 | `messages[].id` | `number` | 메시지 ID (커서로 사용) |
+| `messages[].userId` | `number` | 발신자 사용자 ID (본인 메시지 식별용) |
 | `messages[].content` | `string` | 메시지 내용 |
-| `messages[].userName` | `string` | 발신자 이름 |
+| `messages[].userName` | `string` | 발신자 닉네임 |
 | `messages[].createdAt` | `string` | 전송 일시 (ISO 8601) |
 | `nextCursor` | `number \| null` | 다음 페이지 요청 시 사용할 커서. 다음 페이지 없으면 `null` |
 | `hasNext` | `boolean` | 다음 페이지 존재 여부 |
@@ -1133,3 +1153,10 @@ WebSocket URL: ws://localhost:8080/gyeonggi_partners-chat
 | `USER` | 일반 시민 (기본값) |
 | `OFFICIAL` | 경기도 정부 관계자 |
 | `ADMIN` | 시스템 관리자 |
+
+### MemberRole (논의방 내 역할)
+
+| 값 | 설명 |
+|----|------|
+| `LEADER` | 방장 (가장 먼저 참여한 멤버) |
+| `PARTICIPANT` | 일반 참여자 |
