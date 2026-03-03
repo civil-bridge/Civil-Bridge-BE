@@ -1,6 +1,7 @@
 package org.example.civilbridge.domain.proposal.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -28,4 +29,8 @@ public class SubmitProposalRequest {
 
     @Schema(description = "기대 효과", example = "출퇴근 시간 교통 체증 30% 감소 예상")
     private String expectedEffect;
+
+    @Min(value = 1, message = "목표 동의 인원은 1명 이상이어야 합니다.")
+    @Schema(description = "목표 동의 인원 (정족수)", example = "10")
+    private int minAgreements;
 }

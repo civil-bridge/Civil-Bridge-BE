@@ -68,7 +68,7 @@ public class ProposalRepositoryImpl implements ProposalRepository {
     }
 
     @Override
-    public void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline) {
+    public void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline, int requiredConsents) {
         String contentsJson = null;
         if (contents != null) {
             try {
@@ -77,7 +77,7 @@ public class ProposalRepositoryImpl implements ProposalRepository {
                 throw new IllegalStateException("ContentFormat 직렬화에 실패했습니다.", e);
             }
         }
-        proposalJpaRepository.submitAndStartVoting(proposalId, title, contentsJson, deadline, LocalDateTime.now());
+        proposalJpaRepository.submitAndStartVoting(proposalId, title, contentsJson, deadline, requiredConsents, LocalDateTime.now());
     }
 
     @Override

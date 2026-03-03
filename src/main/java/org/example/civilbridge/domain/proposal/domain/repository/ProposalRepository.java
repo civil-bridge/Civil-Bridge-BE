@@ -22,7 +22,7 @@ public interface ProposalRepository {
 
     void updateContent(Long proposalId, String title, ContentFormat contents);
 
-    void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline);
+    void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline, int requiredConsents);
 
     void addConsent(Long proposalId, Consenter consenter);
 }
