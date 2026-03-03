@@ -1,6 +1,6 @@
 # Civil Bridge API 명세서
 
-> **버전**: 2026-02-25 기준 실제 구현된 엔드포인트 기준
+> **버전**: 2026-03-02 기준 실제 구현된 엔드포인트 기준
 > **Base URL**: `http://localhost:8080` (로컬), `https://api.civil-bridge.com` (운영)
 > **API 문서(Swagger)**: `http://localhost:8080/swagger-ui.html`
 
@@ -577,23 +577,15 @@ HTTP 200 OK
 
 ```json
 {
-  "title": "수원시 영통구 교통 체증 해결 방안",
-  "paragraph": "경기도 수원시 영통구의 교통 체증 문제를 해결하기 위한 제안입니다.",
-  "image": "https://example.com/images/proposal.png",
-  "solution": "버스 전용 차로 확대 및 신호 체계 개선",
-  "expectedEffect": "출퇴근 시간 교통 체증 30% 감소 예상",
   "roomId": 1
 }
 ```
 
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| `title` | `string` | ❌ | 제안서 제목 |
-| `paragraph` | `string` | ❌ | 본문 내용 |
-| `image` | `string` | ❌ | 이미지 URL |
-| `solution` | `string` | ❌ | 해결 방안 |
-| `expectedEffect` | `string` | ❌ | 기대 효과 |
-| `roomId` | `number` | ❌ | 연결할 논의방 ID |
+| `roomId` | `number` | ✅ | 연결할 논의방 ID |
+
+> **참고**: 제안서는 빈 상태로 생성됩니다. 내용은 이후 `5-4. 제안서 수정`으로 저장하고, `5-8. 투표 시작` 시 최종 제출합니다.
 
 #### Response Body (`data`)
 
@@ -792,8 +784,8 @@ HTTP 200 OK
 **`POST /api/proposals/{proposalId}/start-voting`**
 인증 필요
 
-제안서에 대한 투표를 시작합니다. 기본 투표 기간은 3일입니다.
-호출 후 제안서 상태가 `VOTING`으로 변경됩니다.
+최종 내용 저장과 투표 상태 전환을 단일 요청으로 원자적으로 처리합니다. 기본 투표 기간은 3일입니다.
+호출 후 제안서 상태가 `VOTING`으로 변경됩니다. **제안서 작성자(authorId)만 호출할 수 있습니다.** 다른 사용자가 현재 편집 중인 경우(락 보유) 호출이 차단됩니다.
 
 #### Path Parameters
 
@@ -803,7 +795,23 @@ HTTP 200 OK
 
 #### Request Body
 
-없음
+```json
+{
+  "title": "수원시 영통구 교통 체증 해결 방안",
+  "paragraph": "경기도 수원시 영통구의 교통 체증 문제를 해결하기 위한 제안입니다.",
+  "image": "https://example.com/images/proposal.png",
+  "solution": "버스 전용 차로 확대 및 신호 체계 개선",
+  "expectedEffect": "출퇴근 시간 교통 체증 30% 감소 예상"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `title` | `string` | ✅ | 제안서 제목 (5~100자) |
+| `paragraph` | `string` | ✅ | 본문 내용 |
+| `image` | `string` | ❌ | 이미지 URL |
+| `solution` | `string` | ❌ | 해결 방안 |
+| `expectedEffect` | `string` | ❌ | 기대 효과 |
 
 #### Response Body (`data`)
 
@@ -840,6 +848,7 @@ HTTP 200 OK
 인증 필요
 
 투표 중인 제안서에 동의합니다. 한 사용자는 한 제안서에 한 번만 동의할 수 있습니다.
+논의방 참여자라면 작성자 본인 포함 누구든 동의할 수 있습니다.
 
 #### Path Parameters
 
@@ -851,14 +860,21 @@ HTTP 200 OK
 
 없음
 
-#### Response Body
+#### Response Body (`data`)
 
 ```json
 {
   "code": "SUCCESS",
-  "message": "제안서 동의 완료"
+  "message": "제안서 동의 완료",
+  "data": {
+    "totalConsents": 6
+  }
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `totalConsents` | `number` | 투표 반영 후 최신 총 동의 인원수 |
 
 ---
 
