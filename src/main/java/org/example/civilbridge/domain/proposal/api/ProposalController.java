@@ -140,14 +140,14 @@ public class ProposalController {
 
     @Operation(summary = "제안서 동의", security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/{proposalId}/consents")
-    public ResponseEntity<ApiResponse<ProposalResponse>> consentProposal(
+    public ResponseEntity<ApiResponse<ConsentResponse>> consentProposal(
             @PathVariable Long proposalId,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
-        proposalService.consentProposal(proposalId, userDetails.getUserId());
+        ConsentResponse response = proposalService.consentProposal(proposalId, userDetails.getUserId());
 
-        return ResponseEntity.ok(ApiResponse.success(null, "제안서 동의 완료"));
+        return ResponseEntity.ok(ApiResponse.success(response, "제안서 동의 완료"));
     }
 
 

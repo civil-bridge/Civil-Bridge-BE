@@ -193,29 +193,37 @@ public class ProposalService {
     /**
      * 해당 제안서에 동의하기
      */
-    public void consentProposal(Long proposalId, Long userId) {
+    public ConsentResponse consentProposal(Long proposalId, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
 
         validateRoomMember(proposal.getRoomId(), userId);
 
-        proposal.checkAndUpdateVotingStatus();
+        if (proposal.getStatus() != SubmitStatus.VOTING) {
+            throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
+        }
+
+        if (proposal.getDeadline() != null && LocalDateTime.now().isAfter(proposal.getDeadline())) {
+            throw new BusinessException(ProposalErrorCode.VOTING_DEADLINE_EXPIRED);
+        }
+
+        if (proposal.getConsents() != null &&
+                proposal.getConsents().stream().anyMatch(c -> c.getId().equals(userId))) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_CONSENTED);
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
-        try {
-            proposal.addConsent(new Consenter(user.getId(), user.getNickname()));
-            proposalRepository.save(proposal);
-        }catch (IllegalStateException e) {
-            if (e.getMessage().contains("이미 동의")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_CONSENTED);
-            } else if (e.getMessage().contains("투표 중")) {
-                throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
-            } else if (e.getMessage().contains("마감")) {
-                throw new BusinessException(ProposalErrorCode.VOTING_DEADLINE_EXPIRED);
-            }
-        }
+        // @Version 우회 native query로 consents 컬럼에만 append (스케줄러와의 낙관적 락 충돌 방지)
+        proposalRepository.addConsent(proposalId, new Consenter(user.getId(), user.getNickname()));
+
+        // clearAutomatically = true 덕분에 JPA 캐시가 비워져 DB의 최신 consents 반영
+        Proposal updated = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
+
+        int totalConsents = updated.getConsents() != null ? updated.getConsents().size() : 0;
+        return new ConsentResponse(totalConsents);
     }
 
     /**
