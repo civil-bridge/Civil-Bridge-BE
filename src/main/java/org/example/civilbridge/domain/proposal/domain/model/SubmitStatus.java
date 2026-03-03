@@ -2,7 +2,7 @@ package org.example.civilbridge.domain.proposal.domain.model;
 
 public enum SubmitStatus {
 
-    SUBMITTABLE,    // 제출 가능
+    COMPLETED,      // 투표 완료 (가결)
     UNSUBMITTABLE,  // 제출 불가능
     VOTING;         // 투표 중
 }

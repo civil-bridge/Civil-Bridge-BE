@@ -135,8 +135,8 @@ public class ProposalService {
         if (proposal.getStatus() == SubmitStatus.VOTING) {
             throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
         }
-        if (proposal.getStatus() == SubmitStatus.SUBMITTABLE) {
-            throw new BusinessException(ProposalErrorCode.ALREADY_SUBMITTABLE);
+        if (proposal.getStatus() == SubmitStatus.COMPLETED) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_COMPLETED);
         }
 
         if (!proposal.getAuthorId().equals(userId)) {
@@ -158,7 +158,7 @@ public class ProposalService {
         LocalDateTime deadline = LocalDateTime.now().plusDays(Proposal.SUBMISSION_DURATION_DAYS);
 
         // content 저장 + 투표 전환을 단일 쿼리로 원자적 처리 (@Version 우회)
-        proposalRepository.submitAndStartVoting(proposalId, request.getTitle(), contents, deadline);
+        proposalRepository.submitAndStartVoting(proposalId, request.getTitle(), contents, deadline, request.getMinAgreements());
 
         lockService.unlock(proposalId, userId);
 
@@ -178,11 +178,20 @@ public class ProposalService {
 
         validateRoomMember(proposal.getRoomId(), userId);
 
-        try {
-            proposal.endVoting();
-        }catch (IllegalStateException e) {
+        if (proposal.getStatus() != SubmitStatus.VOTING) {
             throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
         }
+
+        if (!proposal.getAuthorId().equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        int consentCount = proposal.getConsents() != null ? proposal.getConsents().size() : 0;
+        if (consentCount < proposal.getRequiredConsents()) {
+            throw new BusinessException(ProposalErrorCode.INSUFFICIENT_CONSENTS);
+        }
+
+        proposal.endVoting();
 
         Proposal saved = proposalRepository.save(proposal);
 

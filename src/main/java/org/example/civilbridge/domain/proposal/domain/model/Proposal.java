@@ -93,8 +93,8 @@ public class Proposal {
             throw new IllegalArgumentException("이미 투표가 진행 중입니다.");
         }
 
-        if (status == SubmitStatus.SUBMITTABLE) {
-            throw new IllegalArgumentException("이미 제출 가능한 상태입니다");
+        if (status == SubmitStatus.COMPLETED) {
+            throw new IllegalArgumentException("이미 완료된 제안서입니다.");
         }
 
         this.status = SubmitStatus.VOTING;
@@ -112,7 +112,7 @@ public class Proposal {
         int consentCount = this.consents != null ? this.consents.size() : 0;
 
         if (consentCount >= this.requiredConsents) {
-            this.status = SubmitStatus.SUBMITTABLE;
+            this.status = SubmitStatus.COMPLETED;
         } else {
             this.status = SubmitStatus.UNSUBMITTABLE;
         }
@@ -175,7 +175,7 @@ public class Proposal {
         if (LocalDateTime.now().isBefore(deadline)) {
 
             if (consents.size() >= this.requiredConsents) {
-                this.status = SubmitStatus.SUBMITTABLE;
+                this.status = SubmitStatus.COMPLETED;
             }
         }
     }
