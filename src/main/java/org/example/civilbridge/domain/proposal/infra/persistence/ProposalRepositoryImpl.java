@@ -3,6 +3,7 @@ package org.example.civilbridge.domain.proposal.infra.persistence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.example.civilbridge.domain.proposal.domain.model.Consenter;
 import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
 import org.example.civilbridge.domain.proposal.domain.repository.ProposalRepository;
@@ -64,5 +65,28 @@ public class ProposalRepositoryImpl implements ProposalRepository {
             }
         }
         proposalJpaRepository.updateContent(proposalId, title, contentsJson, LocalDateTime.now());
+    }
+
+    @Override
+    public void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline) {
+        String contentsJson = null;
+        if (contents != null) {
+            try {
+                contentsJson = objectMapper.writeValueAsString(contents);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException("ContentFormat 직렬화에 실패했습니다.", e);
+            }
+        }
+        proposalJpaRepository.submitAndStartVoting(proposalId, title, contentsJson, deadline, LocalDateTime.now());
+    }
+
+    @Override
+    public void addConsent(Long proposalId, Consenter consenter) {
+        try {
+            String consenterJson = objectMapper.writeValueAsString(consenter);
+            proposalJpaRepository.addConsent(proposalId, consenterJson, LocalDateTime.now());
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Consenter 직렬화에 실패했습니다.", e);
+        }
     }
 }

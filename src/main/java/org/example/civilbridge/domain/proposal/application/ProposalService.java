@@ -16,6 +16,7 @@ import org.example.civilbridge.domain.user.exception.UserErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -120,35 +121,51 @@ public class ProposalService {
     }
 
     /**
-     * 투표 시작
+     * 투표 시작 (최종 제출)
+     * - 마지막 내용 저장과 투표 상태 전환을 단일 native SQL로 원자적 처리
+     * - @Version 체크를 우회하여 PUT(update) 직후 POST(start-voting) 연속 호출 시 발생하는
+     *   OptimisticLockingFailureException 방지
      */
-    public ProposalResponse startVoting(Long proposalId, Long userId) {
+    public ProposalResponse startVoting(Long proposalId, SubmitProposalRequest request, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
 
         validateRoomMember(proposal.getRoomId(), userId);
 
-        // 빈 제안서로 투표 시작 방지
-        if (proposal.getTitle() == null || proposal.getTitle().isBlank()) {
-            throw new BusinessException(ProposalErrorCode.INVALID_TITLE_LENGTH);
+        if (proposal.getStatus() == SubmitStatus.VOTING) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
         }
-        if (proposal.getContents() == null || proposal.getContents().getParagraph() == null) {
-            throw new BusinessException(ProposalErrorCode.EMPTY_PROPOSAL_BODY);
-        }
-
-        try {
-            proposal.startVoting();
-        } catch (IllegalArgumentException e) {
-            if (e.getMessage().contains("이미 투표")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
-            } else if (e.getMessage().contains("제출 가능한")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_SUBMITTABLE);
-            }
+        if (proposal.getStatus() == SubmitStatus.SUBMITTABLE) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_SUBMITTABLE);
         }
 
-        Proposal saved = proposalRepository.save(proposal);
+        if (!proposal.getAuthorId().equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.UNAUTHORIZED_ACCESS);
+        }
 
-        return ProposalResponse.from(saved);
+        Long lockOwner = lockService.getLockOwner(proposalId);
+        if (lockOwner != null && !lockOwner.equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.PROPOSAL_BEING_EDITED);
+        }
+
+        ContentFormat contents = ContentFormat.of(
+                request.getParagraph(),
+                request.getImage(),
+                request.getSolution(),
+                request.getExpectedEffect()
+        );
+
+        LocalDateTime deadline = LocalDateTime.now().plusDays(Proposal.SUBMISSION_DURATION_DAYS);
+
+        // content 저장 + 투표 전환을 단일 쿼리로 원자적 처리 (@Version 우회)
+        proposalRepository.submitAndStartVoting(proposalId, request.getTitle(), contents, deadline);
+
+        lockService.unlock(proposalId, userId);
+
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
     }
 
     /**

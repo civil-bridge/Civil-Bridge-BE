@@ -1,5 +1,6 @@
 package org.example.civilbridge.domain.proposal.domain.repository;
 
+import org.example.civilbridge.domain.proposal.domain.model.Consenter;
 import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
 
@@ -20,4 +21,8 @@ public interface ProposalRepository {
     int countByRoomId(Long roomId);
 
     void updateContent(Long proposalId, String title, ContentFormat contents);
+
+    void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline);
+
+    void addConsent(Long proposalId, Consenter consenter);
 }

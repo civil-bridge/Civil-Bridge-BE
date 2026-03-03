@@ -27,4 +27,22 @@ public interface ProposalJpaRepository extends JpaRepository<ProposalEntity, Lon
                        @Param("title") String title,
                        @Param("contentsJson") String contentsJson,
                        @Param("updatedAt") LocalDateTime updatedAt);
+
+    // 최종 제출: content 저장 + 투표 상태 전환을 단일 쿼리로 원자적 처리 (@Version 우회)
+    @Modifying(clearAutomatically = true)
+    @Query(value = "UPDATE proposals SET title = :title, contents = :contentsJson, status = 'VOTING', consent_deadline = :deadline, updated_at = :updatedAt WHERE proposal_id = :proposalId",
+            nativeQuery = true)
+    void submitAndStartVoting(@Param("proposalId") Long proposalId,
+                              @Param("title") String title,
+                              @Param("contentsJson") String contentsJson,
+                              @Param("deadline") LocalDateTime deadline,
+                              @Param("updatedAt") LocalDateTime updatedAt);
+
+    // 동의 추가: consents JSON 배열에 새 동의자를 append (@Version 우회, 스케줄러와의 충돌 방지)
+    @Modifying(clearAutomatically = true)
+    @Query(value = "UPDATE proposals SET consents = JSON_ARRAY_APPEND(COALESCE(consents, JSON_ARRAY()), '$', CAST(:consenterJson AS JSON)), updated_at = :updatedAt WHERE proposal_id = :proposalId",
+            nativeQuery = true)
+    void addConsent(@Param("proposalId") Long proposalId,
+                    @Param("consenterJson") String consenterJson,
+                    @Param("updatedAt") LocalDateTime updatedAt);
 }
