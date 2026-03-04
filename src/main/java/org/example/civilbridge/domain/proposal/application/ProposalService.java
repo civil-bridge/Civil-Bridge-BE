@@ -155,7 +155,7 @@ public class ProposalService {
                 request.getExpectedEffect()
         );
 
-        LocalDateTime deadline = LocalDateTime.now().plusDays(Proposal.SUBMISSION_DURATION_DAYS);
+        LocalDateTime deadline = request.getDeadline();
 
         // content 저장 + 투표 전환을 단일 쿼리로 원자적 처리 (@Version 우회)
         proposalRepository.submitAndStartVoting(proposalId, request.getTitle(), contents, deadline, request.getMinAgreements());

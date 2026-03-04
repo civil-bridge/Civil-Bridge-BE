@@ -17,8 +17,7 @@ public class Proposal {
     // 제목 길이 제한
     public static final int MIN_TITLE_LENGTH = 5;
     public static final int MAX_TITLE_LENGTH = 100;
-    // 마감기간, 최소 동의 인원
-    public static final int SUBMISSION_DURATION_DAYS = 3;
+    // 최소 동의 인원
     public static final int SUBMISSION_MIN_CONSENTS_COUNT = 10;
 
 
@@ -87,7 +86,7 @@ public class Proposal {
 
 
     // 투표 시작
-    public void startVoting() {
+    public void startVoting(LocalDateTime deadline) {
 
         if (status == SubmitStatus.VOTING) {
             throw new IllegalArgumentException("이미 투표가 진행 중입니다.");
@@ -98,7 +97,7 @@ public class Proposal {
         }
 
         this.status = SubmitStatus.VOTING;
-        this.deadline = LocalDateTime.now().plusDays(SUBMISSION_DURATION_DAYS);
+        this.deadline = deadline;
     }
 
     /**

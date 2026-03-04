@@ -1,9 +1,12 @@
 package org.example.civilbridge.domain.proposal.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,4 +36,9 @@ public class SubmitProposalRequest {
     @Min(value = 1, message = "목표 동의 인원은 1명 이상이어야 합니다.")
     @Schema(description = "목표 동의 인원 (정족수)", example = "10")
     private int minAgreements;
+
+    @NotNull(message = "투표 마감일은 필수입니다.")
+    @Future(message = "투표 마감일은 현재 시각 이후여야 합니다.")
+    @Schema(description = "투표 마감일시", example = "2026-03-07T16:05:00")
+    private LocalDateTime deadline;
 }
