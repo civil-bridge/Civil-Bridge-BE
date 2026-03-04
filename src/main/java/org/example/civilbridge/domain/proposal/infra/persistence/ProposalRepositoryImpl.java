@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.civilbridge.domain.proposal.domain.model.Consenter;
 import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
+import org.example.civilbridge.domain.proposal.domain.model.SubmitStatus;
 import org.example.civilbridge.domain.proposal.domain.repository.ProposalRepository;
 import org.springframework.stereotype.Repository;
 
@@ -88,5 +89,10 @@ public class ProposalRepositoryImpl implements ProposalRepository {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Consenter 직렬화에 실패했습니다.", e);
         }
+    }
+
+    @Override
+    public void updateVotingResult(Long proposalId, SubmitStatus status) {
+        proposalJpaRepository.updateVotingResult(proposalId, status.name(), LocalDateTime.now());
     }
 }

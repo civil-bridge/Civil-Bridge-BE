@@ -170,6 +170,8 @@ public class ProposalService {
 
     /**
      * 투표 종료
+     * - DB에서 최신 상태를 다시 조회한 뒤 검증
+     * - @Version 우회 native query로 상태 확정 (addConsent와의 낙관적 락 충돌 방지)
      */
     public ProposalResponse endVoting(Long proposalId, Long userId) {
 
@@ -191,11 +193,13 @@ public class ProposalService {
             throw new BusinessException(ProposalErrorCode.INSUFFICIENT_CONSENTS);
         }
 
-        proposal.endVoting();
+        // @Version 우회 native query로 투표 결과 확정 (addConsent와의 낙관적 락 충돌 방지)
+        proposalRepository.updateVotingResult(proposalId, SubmitStatus.COMPLETED);
 
-        Proposal saved = proposalRepository.save(proposal);
-
-        return ProposalResponse.from(saved);
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
     }
 
 

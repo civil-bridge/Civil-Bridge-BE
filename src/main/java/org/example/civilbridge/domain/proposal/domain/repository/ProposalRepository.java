@@ -3,6 +3,7 @@ package org.example.civilbridge.domain.proposal.domain.repository;
 import org.example.civilbridge.domain.proposal.domain.model.Consenter;
 import org.example.civilbridge.domain.proposal.domain.model.ContentFormat;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
+import org.example.civilbridge.domain.proposal.domain.model.SubmitStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,4 +26,6 @@ public interface ProposalRepository {
     void submitAndStartVoting(Long proposalId, String title, ContentFormat contents, LocalDateTime deadline, int requiredConsents);
 
     void addConsent(Long proposalId, Consenter consenter);
+
+    void updateVotingResult(Long proposalId, SubmitStatus status);
 }

@@ -46,4 +46,12 @@ public interface ProposalJpaRepository extends JpaRepository<ProposalEntity, Lon
     void addConsent(@Param("proposalId") Long proposalId,
                     @Param("consenterJson") String consenterJson,
                     @Param("updatedAt") LocalDateTime updatedAt);
+
+    // 투표 종료: status 확정 + deadline 초기화를 단일 쿼리로 원자적 처리 (@Version 우회, addConsent와의 낙관적 락 충돌 방지)
+    @Modifying(clearAutomatically = true)
+    @Query(value = "UPDATE proposals SET status = :status, consent_deadline = NULL, version = version + 1, updated_at = :updatedAt WHERE proposal_id = :proposalId",
+            nativeQuery = true)
+    void updateVotingResult(@Param("proposalId") Long proposalId,
+                            @Param("status") String status,
+                            @Param("updatedAt") LocalDateTime updatedAt);
 }
