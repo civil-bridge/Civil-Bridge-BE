@@ -6,7 +6,7 @@
 - **Language**: Java 21
 - **Framework**: Spring Boot 3.5.6
 - **Security**: Spring Security + JWT
-- **Database**: PostgreSQL 15
+- **Database**: MySQL 8.0
 - **ORM**: Spring Data JPA
 - **Migration**: FlywayMigration
 - **Real-time**: WebSocket

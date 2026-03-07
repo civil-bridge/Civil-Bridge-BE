@@ -40,7 +40,7 @@
                             ↓
 ┌─────────────────────────────────────────────────────────┐
 │                   Persistence Layer                      │
-│         PostgreSQL 15    +    Redis 7.4                 │
+│         MySQL 8.0        +    Redis 7.4                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -428,7 +428,7 @@ domain/
 
 ### Database Architecture
 
-#### PostgreSQL (주 저장소)
+#### MySQL (주 저장소)
 ```
 civil_bridge_db
 ├── users               # 사용자 테이블
@@ -683,7 +683,7 @@ DiscussionRoomCacheRepository
   │ redisTemplate.opsForHash().putAll("room:{id}", data)
   │ redisTemplate.opsForZSet().add("list:latest", roomId, timestamp)
   ↓
-PostgreSQL + Redis
+MySQL + Redis
   │ 데이터 영속화 + 캐시 저장
   ↓
 Response

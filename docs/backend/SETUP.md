@@ -5,7 +5,7 @@
 다음 프로그램들이 설치되어 있어야 합니다:
 
 - **Java 21** (JDK)
-- **Docker Desktop** (PostgreSQL 실행용)
+- **Docker Desktop** (MySQL 실행용)
 - **IntelliJ IDEA** (권장)
 - **Git**
 
@@ -73,14 +73,14 @@ docker ps
 docker-compose restart
 
 # 로그 확인
-docker-compose logs postgres-db
+docker-compose logs mysql-db
 docker-compose logs redis-cache
 ```
 
 #### DB 초기화가 필요한 경우
 ```bash
 docker-compose down -v
-rm -rf postgres-data redis-data
+rm -rf mysql-data redis-data
 docker-compose up -d
 ```
 

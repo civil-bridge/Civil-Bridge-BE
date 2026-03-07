@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Civil Bridge** is a civic participation governance platform where citizens and government officials in Gyeonggi Province can discuss regional issues and propose solutions together. Built with Spring Boot 3.5.6, Java 21, PostgreSQL, and Redis.
+**Civil Bridge** is a civic participation governance platform where citizens and government officials in Gyeonggi Province can discuss regional issues and propose solutions together. Built with Spring Boot 3.5.6, Java 21, MySQL 8.0, and Redis.
 
 ## Build & Development Commands
 
@@ -243,8 +243,8 @@ public ResponseEntity<?> someMethod(
 ### Schema Management
 - **Migration Tool**: Flyway (runs automatically on startup)
 - **Migration Path**: `src/main/resources/db/migration/`
-- **Database**: PostgreSQL 15+
-- **Dialect**: PostgreSQL (Hibernate)
+- **Database**: MySQL 8.0
+- **Dialect**: MySQL (Hibernate)
 
 ### Soft Delete Pattern
 - All main tables have `deleted_at` column
@@ -274,7 +274,7 @@ public ResponseEntity<?> someMethod(
 ## Common Issues & Solutions
 
 ### Issue: "Failed to configure a DataSource"
-**Solution**: Ensure PostgreSQL is running via Docker Compose and `application-local.properties` exists with correct DB credentials.
+**Solution**: Ensure MySQL is running via Docker Compose and `application-local.properties` exists with correct DB credentials.
 
 ### Issue: "Could not connect to Redis"
 **Solution**: Start Redis via `docker-compose -f docker-compose.dev.yml up -d`. Check Redis is running on port 6379.
@@ -337,7 +337,7 @@ src/test/java/org/example/civilbridge/
 
 - **Spring Boot**: 3.5.6
 - **Java**: 21
-- **PostgreSQL**: 15+ (runtime)
+- **MySQL**: 8.0 (runtime)
 - **Redis**: 7.x (runtime)
 - **JWT**: jjwt 0.12.3
 - **Flyway**: Database migration
