@@ -19,7 +19,8 @@
       "Bash(./gradlew compileJava:*)",
       "Bash(./gradlew flywayClean:*)",
       "Bash(git commit:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []
