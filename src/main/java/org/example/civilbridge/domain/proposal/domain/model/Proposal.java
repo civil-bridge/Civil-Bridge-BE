@@ -113,7 +113,7 @@ public class Proposal {
         if (consentCount >= this.requiredConsents) {
             this.status = SubmitStatus.COMPLETED;
         } else {
-            this.status = SubmitStatus.UNSUBMITTABLE;
+            this.status = SubmitStatus.REJECTED;
         }
 
         this.deadline = null;

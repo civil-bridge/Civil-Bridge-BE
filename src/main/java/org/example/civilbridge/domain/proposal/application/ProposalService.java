@@ -189,12 +189,20 @@ public class ProposalService {
         }
 
         int consentCount = proposal.getConsents() != null ? proposal.getConsents().size() : 0;
-        if (consentCount < proposal.getRequiredConsents()) {
+        boolean deadlineExpired = proposal.getDeadline() != null
+                && LocalDateTime.now().isAfter(proposal.getDeadline());
+
+        SubmitStatus finalStatus;
+        if (consentCount >= proposal.getRequiredConsents()) {
+            finalStatus = SubmitStatus.COMPLETED;
+        } else if (deadlineExpired) {
+            finalStatus = SubmitStatus.REJECTED;
+        } else {
             throw new BusinessException(ProposalErrorCode.INSUFFICIENT_CONSENTS);
         }
 
         // @Version 우회 native query로 투표 결과 확정 (addConsent와의 낙관적 락 충돌 방지)
-        proposalRepository.updateVotingResult(proposalId, SubmitStatus.COMPLETED);
+        proposalRepository.updateVotingResult(proposalId, finalStatus);
 
         return ProposalResponse.from(
                 proposalRepository.findById(proposalId)
