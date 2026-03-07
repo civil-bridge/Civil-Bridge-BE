@@ -64,5 +64,10 @@ public interface UserRepository {
      */
     List<String> findNicknamesByIds(List<Long> ids);
 
-
+    /**
+     * 사용자 ID 목록으로 User 목록을 조회합니다.
+     * @param ids 사용자 ID 목록
+     * @return User 목록
+     */
+    List<User> findAllByIdIn(List<Long> ids);
 }

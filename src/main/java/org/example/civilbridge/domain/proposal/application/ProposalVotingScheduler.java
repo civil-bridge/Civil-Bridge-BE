@@ -3,6 +3,7 @@ package org.example.civilbridge.domain.proposal.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.civilbridge.domain.proposal.domain.model.Proposal;
+import org.example.civilbridge.domain.proposal.domain.model.SubmitStatus;
 import org.example.civilbridge.domain.proposal.domain.repository.ProposalRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -30,11 +31,15 @@ public class ProposalVotingScheduler {
 
         for(Proposal proposal : expiredProposals) {
             try {
-                proposal.endVoting();
-                proposalRepository.save(proposal);
-                log.info("제안서 {} 투표 자동 죵로 완료 (동의자 수 : {})", proposal.getId(), proposal.getConsents().size());
+                int consentCount = proposal.getConsents() != null ? proposal.getConsents().size() : 0;
+                SubmitStatus finalStatus = consentCount >= proposal.getRequiredConsents()
+                        ? SubmitStatus.COMPLETED
+                        : SubmitStatus.UNSUBMITTABLE;
+                // @Version 우회 native query로 상태 확정 (addConsent와의 낙관적 락 충돌 방지)
+                proposalRepository.updateVotingResult(proposal.getId(), finalStatus);
+                log.info("제안서 {} 투표 자동 종료 완료 (동의자 수: {}, 결과: {})", proposal.getId(), consentCount, finalStatus);
             } catch (Exception e) {
-                log.info("제안서 {} 투표 종료 실패: {}", proposal.getId(), e.getMessage());
+                log.error("제안서 {} 투표 종료 실패: {}", proposal.getId(), e.getMessage());
             }
         }
 

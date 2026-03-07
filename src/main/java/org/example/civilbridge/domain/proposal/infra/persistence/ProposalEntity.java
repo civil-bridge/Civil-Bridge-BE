@@ -32,7 +32,7 @@ public class ProposalEntity extends BaseEntity {
     @Column(name = "author_id")
     private Long authorId;
 
-    @Column(name = "title", nullable = false, length = 100)
+    @Column(name = "title", nullable = true, length = 100)
     private String title;
 
     @Enumerated(EnumType.STRING)
@@ -44,7 +44,7 @@ public class ProposalEntity extends BaseEntity {
     private List<Consenter> consents;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "contents", columnDefinition = "json", nullable = false)
+    @Column(name = "contents", columnDefinition = "json", nullable = true)
     private ContentFormat contents;
 
     @Column(name = "consent_deadline")
@@ -69,6 +69,7 @@ public class ProposalEntity extends BaseEntity {
                 .contents(proposal.getContents())
                 .deadline(proposal.getDeadline())
                 .requiredConsents(proposal.getRequiredConsents())
+                .version(proposal.getVersion())
                 .build();
     }
 
@@ -83,6 +84,7 @@ public class ProposalEntity extends BaseEntity {
                 this.status,
                 this.deadline,
                 this.requiredConsents,
+                this.version,
                 this.getCreatedAt(),
                 this.getUpdatedAt(),
                 this.getDeletedAt()

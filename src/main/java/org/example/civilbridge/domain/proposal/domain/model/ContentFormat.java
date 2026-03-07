@@ -31,9 +31,21 @@ public class ContentFormat {
         this.expectedEffect = expectedEffect;
     }
 
+    private ContentFormat(String paragraph, String image, String solution, String expectedEffect, boolean skipValidation) {
+        this.paragraph = paragraph;
+        this.image = image;
+        this.solution = solution;
+        this.expectedEffect = expectedEffect;
+    }
+
 
     public static ContentFormat of(String paragraph, String image, String solution, String expectedEffect) {
         return new ContentFormat(paragraph, image, solution, expectedEffect);
+    }
+
+    // Auto-save용: paragraph 필수 검증 없이 저장 (미완성 내용 허용)
+    public static ContentFormat ofNullable(String paragraph, String image, String solution, String expectedEffect) {
+        return new ContentFormat(paragraph, image, solution, expectedEffect, true);
     }
 
 

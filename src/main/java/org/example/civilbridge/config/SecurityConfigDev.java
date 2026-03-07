@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -67,6 +68,8 @@ public class SecurityConfigDev {
                 // 로그아웃은 인증 필요
                 .requestMatchers("/api/auth/logout").authenticated()
 
+                // 전체 방 목록 조회는 비회원도 허용 (앞에 선언해야 우선 적용됨)
+                .requestMatchers(HttpMethod.GET, "/api/discussion-rooms/retrieveTotal").permitAll()
                 //논의방 관련은 인증필요
                 .requestMatchers("/api/discussion-rooms/**").authenticated()
                 

@@ -108,13 +108,17 @@ public class ProposalController {
     }
 
 
-    @Operation(summary = "투표 시작", description = "기본 투표 기간 = 3일", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(
+            summary = "제안서 최종 제출 및 투표 시작",
+            description = "최종 내용 저장과 투표 상태 전환을 단일 요청으로 원자적 처리. 기본 투표 기간 = 3일",
+            security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/{proposalId}/start-voting")
     public ResponseEntity<ApiResponse<ProposalResponse>> startVoting(
             @PathVariable Long proposalId,
+            @Valid @RequestBody SubmitProposalRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        ProposalResponse response = proposalService.startVoting(proposalId, userDetails.getUserId());
+        ProposalResponse response = proposalService.startVoting(proposalId, request, userDetails.getUserId());
 
         return ResponseEntity.ok(ApiResponse.success(response, "투표 시작."));
     }
@@ -136,14 +140,14 @@ public class ProposalController {
 
     @Operation(summary = "제안서 동의", security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/{proposalId}/consents")
-    public ResponseEntity<ApiResponse<ProposalResponse>> consentProposal(
+    public ResponseEntity<ApiResponse<ConsentResponse>> consentProposal(
             @PathVariable Long proposalId,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
-        proposalService.consentProposal(proposalId, userDetails.getUserId());
+        ConsentResponse response = proposalService.consentProposal(proposalId, userDetails.getUserId());
 
-        return ResponseEntity.ok(ApiResponse.success(null, "제안서 동의 완료"));
+        return ResponseEntity.ok(ApiResponse.success(response, "제안서 동의 완료"));
     }
 
 

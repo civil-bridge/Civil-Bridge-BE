@@ -37,6 +37,9 @@ public class ProposalResponse {
     @Schema(description = "동의자 목록")
     private List<ConsenterDto> consents;
 
+    @Schema(description = "목표 동의 인원", example = "10")
+    private int minAgreements;
+
     @Schema(description = "마감 기한", example = "2026-03-01T00:00:00")
     private LocalDateTime deadline;
 
@@ -59,6 +62,7 @@ public class ProposalResponse {
                         .map(ConsenterDto::from)
                         .toList()
                         : List.of())
+                .minAgreements(proposal.getRequiredConsents())
                 .deadline(proposal.getDeadline())
                 .createdAt(proposal.getCreatedAt())
                 .updatedAt(proposal.getUpdatedAt())

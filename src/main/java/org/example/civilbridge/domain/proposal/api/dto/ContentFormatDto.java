@@ -25,6 +25,9 @@ public class ContentFormatDto {
     private String expectedEffect;
 
     public static ContentFormatDto from(ContentFormat content) {
+        if (content == null) {
+            return null;
+        }
         return ContentFormatDto.builder()
                 .paragraph(content.getParagraph())
                 .image(content.getImage())

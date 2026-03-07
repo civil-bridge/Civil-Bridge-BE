@@ -56,7 +56,8 @@ public class DiscussionRoomCacheRepositoryImpl implements DiscussionRoomCacheRep
             String roomInfoKey = RedisKeyGenerator.generateRoomInfoKey(cachedRoom.getId());
             String recentRoomsKey = RedisKeyGenerator.generateRecentRoomsKey();
             String userRoomsKey = RedisKeyGenerator.generateUserRoomsKey(creatorId);
-            
+            String roomMembersKey = RedisKeyGenerator.generateRoomMembersKey(cachedRoom.getId());
+
             // 결정사항 9: Redis Transaction (MULTI/EXEC) 사용
             redisTemplate.execute(new SessionCallback<List<Object>>() {
 
@@ -64,19 +65,23 @@ public class DiscussionRoomCacheRepositoryImpl implements DiscussionRoomCacheRep
                 @SuppressWarnings("unchecked")
                 public List<Object> execute(RedisOperations operations) {
                     operations.multi();
-                    
+
                     // 1. room:{id} Hash 저장
                     operations.opsForHash().putAll(roomInfoKey, cachedRoom.toRedisHash());
                     operations.expire(roomInfoKey, TTL_ROOM_INFO);
-                    
+
                     // 2. list:latest ZSet 업데이트 (결정사항 2-2: 최신순)
                     operations.opsForZSet().add(recentRoomsKey, cachedRoom.getId(), (double) timestamp);
                     operations.expire(recentRoomsKey, TTL_RECENT_ROOMS);
-                    
+
                     // 3. user:{creatorId}:joined ZSet 업데이트
                     operations.opsForZSet().add(userRoomsKey, cachedRoom.getId(), (double) timestamp);
                     operations.expire(userRoomsKey, TTL_USER_ROOM);
-                    
+
+                    // 4. room:{roomId}:members List에 생성자 추가
+                    operations.opsForList().rightPush(roomMembersKey, creatorId);
+                    operations.expire(roomMembersKey, TTL_ROOM_MEMBERS);
+
                     return operations.exec();
                 }
             });

@@ -28,9 +28,9 @@ public class RedisSubscriber {
 
             // 해당 채팅방을 구독하고 있는 클라이언트에게 메세지를 보냄
             // 목적지는 /topic/room/{roomId}
-            messagingTemplate.convertAndSend("/topic/room/"+request.getRoomId(), request);
-            
-            log.info("[RedisSubscriber] 브로드캐스팅 완료 - /topic/room/{}", request.getRoomId());
+            messagingTemplate.convertAndSend("/topic/room."+request.getRoomId(), request);
+
+            log.info("[RedisSubscriber] 브로드캐스팅 완료 - /topic/room.{}", request.getRoomId());
 
         } catch (Exception e) {
             log.error("!!!메세지 처리 중 알 수 없는 오류 발생!!! 메세지 내용: {}", message, e);

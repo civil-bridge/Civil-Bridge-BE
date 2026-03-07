@@ -113,21 +113,38 @@ public class DiscussionRoomController {
     }
 
     @Operation(
+            summary = "논의방 상세 조회",
+            description = "논의방의 최신 상세 정보(참여자 목록, 방 정보 등)를 조회합니다. 참여하지 않아도 조회할 수 있습니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/{roomId}")
+    public ResponseEntity<ApiResponse<JoinRoomRes>> getRoomDetail(
+            @Parameter(description = "논의방 ID", example = "1")
+            @PathVariable Long roomId
+    ) {
+        JoinRoomRes response = discussionRoomService.getRoomDetail(roomId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(response, "논의방 상세 정보를 조회했습니다.")
+        );
+    }
+
+    @Operation(
             summary = "논의방 입장",
-            description = "논의방에 입장합니다. 입장 시 방 정보와 멤버 목록을 제공합니다.",
+            description = "논의방에 입장합니다. 이미 참여 중인 경우 중복 가입 없이 최신 방 정보를 반환합니다.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @PostMapping("/{roomId}/join")
     public ResponseEntity<ApiResponse<JoinRoomRes>> joinRoom(
             @Parameter(description = "논의방 ID", example = "1")
             @PathVariable Long roomId,
-            
+
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         JoinRoomRes response = discussionRoomService.joinRoom(userDetails.getUserId(), roomId);
-        
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "논의방에 입장했습니다."));
+
+        return ResponseEntity.ok(
+                ApiResponse.success(response, "논의방에 입장했습니다."));
     }
 
     @Operation(

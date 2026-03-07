@@ -16,6 +16,7 @@ import org.example.civilbridge.domain.user.exception.UserErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -29,28 +30,20 @@ public class ProposalService {
     private final MemberRepository memberRepository;
 
     /**
-     * 제안서 작성
+     * 제안서 작성 (빈 제안서 생성 후 즉시 편집 락 부여)
      */
     public ProposalResponse createProposal(CreateProposalRequest request, Long userId) {
 
         validateRoomMember(request.getRoomId(), userId);
 
-
-        int proposalCount = proposalRepository.countByRoomId(request.getRoomId());
-        if (proposalCount >= 5) {
+        if (proposalRepository.countByRoomId(request.getRoomId()) >= 5) {
             throw new BusinessException(ProposalErrorCode.PROPOSAL_LIMIT_EXCEEDED);
         }
 
-        ContentFormat contents = ContentFormat.of(
-                request.getParagraph(),
-                request.getImage(),
-                request.getSolution(),
-                request.getExpectedEffect()
-        );
+        Proposal saved = proposalRepository.save(Proposal.createBlank(request.getRoomId(), userId));
 
-        Proposal proposal = Proposal.create(request.getRoomId(), userId, request.getTitle(), contents);
-
-        Proposal saved = proposalRepository.save(proposal);
+        // 생성자가 즉시 편집 가능하도록 락 자동 획득
+        lockService.tryLock(saved.getId(), userId);
 
         return ProposalResponse.from(saved);
     }
@@ -88,7 +81,7 @@ public class ProposalService {
 
 
     /**
-     * 제안서 수정
+     * 제안서 수정 (auto-save: @Version 체크 없이 직접 업데이트)
      */
     public ProposalResponse updateProposal(Long proposalId, UpdateProposalRequest request, Long userId) {
 
@@ -102,11 +95,58 @@ public class ProposalService {
         }
 
         Long lockOwner = lockService.getLockOwner(proposalId);
-        if (lockOwner == null || !lockOwner.equals(userId)) {
+        if (lockOwner == null) {
+            throw new BusinessException(ProposalErrorCode.LOCK_NOT_ACQUIRED);
+        }
+        if (!lockOwner.equals(userId)) {
             throw new BusinessException(ProposalErrorCode.PROPOSAL_BEING_EDITED);
         }
 
+        // Auto-save: null 허용 (미완성 내용도 저장 가능)
+        ContentFormat contents = ContentFormat.ofNullable(
+                request.getParagraph(),
+                request.getImage(),
+                request.getSolution(),
+                request.getExpectedEffect()
+        );
 
+        // @Version 체크를 우회하는 직접 업데이트 (Redis 락이 단일 작성자를 이미 보장)
+        proposalRepository.updateContent(proposalId, request.getTitle(), contents);
+        lockService.renewLock(proposalId, userId);
+
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
+    }
+
+    /**
+     * 투표 시작 (최종 제출)
+     * - 마지막 내용 저장과 투표 상태 전환을 단일 native SQL로 원자적 처리
+     * - @Version 체크를 우회하여 PUT(update) 직후 POST(start-voting) 연속 호출 시 발생하는
+     *   OptimisticLockingFailureException 방지
+     */
+    public ProposalResponse startVoting(Long proposalId, SubmitProposalRequest request, Long userId) {
+        Proposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
+
+        validateRoomMember(proposal.getRoomId(), userId);
+
+        if (proposal.getStatus() == SubmitStatus.VOTING) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
+        }
+        if (proposal.getStatus() == SubmitStatus.COMPLETED) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_COMPLETED);
+        }
+
+        if (!proposal.getAuthorId().equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        Long lockOwner = lockService.getLockOwner(proposalId);
+        if (lockOwner != null && !lockOwner.equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.PROPOSAL_BEING_EDITED);
+        }
 
         ContentFormat contents = ContentFormat.of(
                 request.getParagraph(),
@@ -115,41 +155,23 @@ public class ProposalService {
                 request.getExpectedEffect()
         );
 
-        proposal.update(request.getTitle(), contents);
+        LocalDateTime deadline = request.getDeadline();
 
-        Proposal updated = proposalRepository.save(proposal);
+        // content 저장 + 투표 전환을 단일 쿼리로 원자적 처리 (@Version 우회)
+        proposalRepository.submitAndStartVoting(proposalId, request.getTitle(), contents, deadline, request.getMinAgreements());
 
-        lockService.renewLock(proposalId, userId);
+        lockService.unlock(proposalId, userId);
 
-        return ProposalResponse.from(updated);
-    }
-
-    /**
-     * 투표 시작
-     */
-    public ProposalResponse startVoting(Long proposalId, Long userId) {
-        Proposal proposal = proposalRepository.findById(proposalId)
-                .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
-
-        validateRoomMember(proposal.getRoomId(), userId);
-
-        try {
-            proposal.startVoting();
-        }catch (IllegalStateException e) {
-            if (e.getMessage().contains("이미 투표")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_VOTING);
-            } else if (e.getMessage().contains("제출 가능한")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_SUBMITTABLE);
-            }
-        }
-
-        Proposal saved = proposalRepository.save(proposal);
-
-        return ProposalResponse.from(saved);
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
     }
 
     /**
      * 투표 종료
+     * - DB에서 최신 상태를 다시 조회한 뒤 검증
+     * - @Version 우회 native query로 상태 확정 (addConsent와의 낙관적 락 충돌 방지)
      */
     public ProposalResponse endVoting(Long proposalId, Long userId) {
 
@@ -158,44 +180,71 @@ public class ProposalService {
 
         validateRoomMember(proposal.getRoomId(), userId);
 
-        try {
-            proposal.endVoting();
-        }catch (IllegalStateException e) {
+        if (proposal.getStatus() != SubmitStatus.VOTING) {
             throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
         }
 
-        Proposal saved = proposalRepository.save(proposal);
+        if (!proposal.getAuthorId().equals(userId)) {
+            throw new BusinessException(ProposalErrorCode.UNAUTHORIZED_ACCESS);
+        }
 
-        return ProposalResponse.from(saved);
+        int consentCount = proposal.getConsents() != null ? proposal.getConsents().size() : 0;
+        boolean deadlineExpired = proposal.getDeadline() != null
+                && LocalDateTime.now().isAfter(proposal.getDeadline());
+
+        SubmitStatus finalStatus;
+        if (consentCount >= proposal.getRequiredConsents()) {
+            finalStatus = SubmitStatus.COMPLETED;
+        } else if (deadlineExpired) {
+            finalStatus = SubmitStatus.REJECTED;
+        } else {
+            throw new BusinessException(ProposalErrorCode.INSUFFICIENT_CONSENTS);
+        }
+
+        // @Version 우회 native query로 투표 결과 확정 (addConsent와의 낙관적 락 충돌 방지)
+        proposalRepository.updateVotingResult(proposalId, finalStatus);
+
+        return ProposalResponse.from(
+                proposalRepository.findById(proposalId)
+                        .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND))
+        );
     }
 
 
     /**
      * 해당 제안서에 동의하기
      */
-    public void consentProposal(Long proposalId, Long userId) {
+    public ConsentResponse consentProposal(Long proposalId, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
 
         validateRoomMember(proposal.getRoomId(), userId);
 
-        proposal.checkAndUpdateVotingStatus();
+        if (proposal.getStatus() != SubmitStatus.VOTING) {
+            throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
+        }
+
+        if (proposal.getDeadline() != null && LocalDateTime.now().isAfter(proposal.getDeadline())) {
+            throw new BusinessException(ProposalErrorCode.VOTING_DEADLINE_EXPIRED);
+        }
+
+        if (proposal.getConsents() != null &&
+                proposal.getConsents().stream().anyMatch(c -> c.getId().equals(userId))) {
+            throw new BusinessException(ProposalErrorCode.ALREADY_CONSENTED);
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
-        try {
-            proposal.addConsent(new Consenter(user.getId(), user.getNickname()));
-            proposalRepository.save(proposal);
-        }catch (IllegalStateException e) {
-            if (e.getMessage().contains("이미 동의")) {
-                throw new BusinessException(ProposalErrorCode.ALREADY_CONSENTED);
-            } else if (e.getMessage().contains("투표 중")) {
-                throw new BusinessException(ProposalErrorCode.NOT_IN_VOTING);
-            } else if (e.getMessage().contains("마감")) {
-                throw new BusinessException(ProposalErrorCode.VOTING_DEADLINE_EXPIRED);
-            }
-        }
+        // @Version 우회 native query로 consents 컬럼에만 append (스케줄러와의 낙관적 락 충돌 방지)
+        proposalRepository.addConsent(proposalId, new Consenter(user.getId(), user.getNickname()));
+
+        // clearAutomatically = true 덕분에 JPA 캐시가 비워져 DB의 최신 consents 반영
+        Proposal updated = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
+
+        int totalConsents = updated.getConsents() != null ? updated.getConsents().size() : 0;
+        return new ConsentResponse(totalConsents);
     }
 
     /**
@@ -240,10 +289,10 @@ public class ProposalService {
      */
     public void finishEditing(Long proposalId, Long userId) {
 
-        proposalRepository.findById(proposalId)
+        Proposal proposal = proposalRepository.findById(proposalId)
                         .orElseThrow(() -> new BusinessException(ProposalErrorCode.PROPOSAL_NOT_FOUND));
 
-        validateRoomMember(proposalId, userId);
+        validateRoomMember(proposal.getRoomId(), userId);
 
         lockService.unlock(proposalId, userId);
     }

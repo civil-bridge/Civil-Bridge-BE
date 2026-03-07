@@ -17,8 +17,7 @@ public class Proposal {
     // 제목 길이 제한
     public static final int MIN_TITLE_LENGTH = 5;
     public static final int MAX_TITLE_LENGTH = 100;
-    // 마감기간, 최소 동의 인원
-    public static final int SUBMISSION_DURATION_DAYS = 3;
+    // 최소 동의 인원
     public static final int SUBMISSION_MIN_CONSENTS_COUNT = 10;
 
 
@@ -26,6 +25,9 @@ public class Proposal {
     private Long id;
     private Long roomId;
     private Long authorId;
+
+    // 낙관적 락 버전
+    private Long version;
     // 제안서 - 제목, 내용
     private String title;
     private ContentFormat contents;
@@ -59,6 +61,19 @@ public class Proposal {
 
     }
 
+    public static Proposal createBlank(Long roomId, Long authorId) {
+        return Proposal.builder()
+                .roomId(roomId)
+                .authorId(authorId)
+                .title(null)
+                .contents(null)
+                .status(SubmitStatus.UNSUBMITTABLE)
+                .consents(new ArrayList<>())
+                .requiredConsents(SUBMISSION_MIN_CONSENTS_COUNT)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
 
     public void update(String title, ContentFormat contents) {
         validateTitle(title);
@@ -71,18 +86,18 @@ public class Proposal {
 
 
     // 투표 시작
-    public void startVoting() {
+    public void startVoting(LocalDateTime deadline) {
 
         if (status == SubmitStatus.VOTING) {
             throw new IllegalArgumentException("이미 투표가 진행 중입니다.");
         }
 
-        if (status == SubmitStatus.SUBMITTABLE) {
-            throw new IllegalArgumentException("이미 제출 가능한 상태입니다");
+        if (status == SubmitStatus.COMPLETED) {
+            throw new IllegalArgumentException("이미 완료된 제안서입니다.");
         }
 
         this.status = SubmitStatus.VOTING;
-        this.deadline = LocalDateTime.now().plusDays(SUBMISSION_DURATION_DAYS);
+        this.deadline = deadline;
     }
 
     /**
@@ -96,9 +111,9 @@ public class Proposal {
         int consentCount = this.consents != null ? this.consents.size() : 0;
 
         if (consentCount >= this.requiredConsents) {
-            this.status = SubmitStatus.SUBMITTABLE;
+            this.status = SubmitStatus.COMPLETED;
         } else {
-            this.status = SubmitStatus.UNSUBMITTABLE;
+            this.status = SubmitStatus.REJECTED;
         }
 
         this.deadline = null;
@@ -159,14 +174,14 @@ public class Proposal {
         if (LocalDateTime.now().isBefore(deadline)) {
 
             if (consents.size() >= this.requiredConsents) {
-                this.status = SubmitStatus.SUBMITTABLE;
+                this.status = SubmitStatus.COMPLETED;
             }
         }
     }
 
     public static Proposal restore(Long id, Long roomId, Long authorId, String title, ContentFormat contents,
                             List<Consenter> consents, SubmitStatus status, LocalDateTime deadline,
-                            int requiredConsents, LocalDateTime createdAt,
+                            int requiredConsents, Long version, LocalDateTime createdAt,
                             LocalDateTime updatedAt, LocalDateTime deletedAt) {
         return Proposal.builder()
                 .id(id)
@@ -178,6 +193,7 @@ public class Proposal {
                 .status(status)
                 .deadline(deadline)
                 .requiredConsents(requiredConsents)
+                .version(version)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .deletedAt(deletedAt)
