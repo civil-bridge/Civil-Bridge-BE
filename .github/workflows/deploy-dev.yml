@@ -19,7 +19,7 @@ jobs:
     # 이 작업의 실행 조건을 명시합니다.
     # Pull Request가 'merged'(병합)된 상태로 닫혔을 경우에만 아래 단계를 실행합니다.
     # (단순히 닫기만 한 PR에서는 배포가 실행되지 않습니다.)
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
 
     # 이 작업이 실행될 가상 환경을 지정합니다. (최신 버전의 우분투 리눅스)
     runs-on: ubuntu-latest

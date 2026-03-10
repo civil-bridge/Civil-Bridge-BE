@@ -47,18 +47,18 @@
 
 ## Database & Persistence
 
-### PostgreSQL 15
+### MySQL 8.0
 - **용도**: 주 데이터베이스 (RDBMS)
-- **버전**: 15
-- **포트**: 5433 (로컬)
+- **버전**: 8.0
+- **포트**: 3307 (로컬)
 - **선택 이유**:
   - 강력한 ACID 트랜잭션 보장
   - 복잡한 쿼리 및 인덱싱 지원
-  - JSON/JSONB 데이터 타입 지원
+  - JSON 데이터 타입 지원
   - 오픈소스 & 무료
 - **연결 정보**:
-  - 드라이버: `org.postgresql:postgresql` (runtime)
-  - URL: `jdbc:postgresql://localhost:5433/civil_bridge_db`
+  - 드라이버: `com.mysql:mysql-connector-j` (runtime)
+  - URL: `jdbc:mysql://localhost:3307/civil_bridge_db`
 
 ### Spring Data JPA
 - **용도**: ORM (Object-Relational Mapping)
@@ -70,12 +70,12 @@
   - Query Method 자동 생성
   - @EntityListeners를 통한 Auditing
 - **설정**:
-  - Dialect: `org.hibernate.dialect.PostgreSQLDialect`
+  - Dialect: `org.hibernate.dialect.MySQLDialect`
   - SQL 포매팅: `hibernate.format_sql=true`
 
 ### Flyway Migration
 - **용도**: 데이터베이스 스키마 버전 관리
-- **버전**: `org.flywaydb:flyway-core`, `org.flywaydb:flyway-database-postgresql`
+- **버전**: `org.flywaydb:flyway-core`, `org.flywaydb:flyway-mysql`
 - **선택 이유**:
   - 스키마 변경 이력 추적
   - 롤백 및 재실행 가능
@@ -83,14 +83,6 @@
 - **마이그레이션 파일 위치**: `src/main/resources/db/migration/`
 - **네이밍 규칙**: `V{version}__{description}.sql`
   - 예: `V1__init.sql`
-
-### Hypersistence Utils
-- **용도**: Hibernate 성능 최적화 유틸리티
-- **버전**: `io.hypersistence:hypersistence-utils-hibernate-63:3.7.3`
-- **주요 기능**:
-  - JSON 타입 매핑 지원
-  - 배치 처리 최적화
-  - N+1 쿼리 문제 해결 도구
 
 ---
 
@@ -234,7 +226,7 @@
   - `/actuator/health`: 애플리케이션 상태
   - `/actuator/info`: 애플리케이션 정보
 - **헬스 체크 대상**:
-  - PostgreSQL 데이터베이스
+  - MySQL 데이터베이스
   - Redis 연결 상태
 - **선택 이유**:
   - 운영 환경에서 서비스 상태 모니터링
@@ -259,11 +251,11 @@
 - **용도**: 컨테이너화 및 로컬 개발 환경
 - **버전**: Docker Compose v3.8
 - **컨테이너**:
-  1. **PostgreSQL**:
-     - 이미지: `postgres:15`
+  1. **MySQL**:
+     - 이미지: `mysql:8.0`
      - 컨테이너명: `civil-bridge-db`
-     - 포트: `5433:5432`
-     - 볼륨: `./postgres-data:/var/lib/postgresql/data`
+     - 포트: `3307:3306`
+     - 볼륨: `./mysql-data:/var/lib/mysql`
   2. **Redis**:
      - 이미지: `redis:7.4-alpine`
      - 컨테이너명: `civil-bridge-redis`
@@ -402,20 +394,20 @@
 |------|------|------|
 | Java | 21 | 프로그래밍 언어 |
 | Spring Boot | 3.5.6 | 프레임워크 |
-| PostgreSQL | 15 | RDBMS |
+| MySQL | 8.0 | RDBMS |
 | Redis | 7.4-alpine | 캐시 + Pub/Sub |
 | Gradle | 8.14.3 | 빌드 도구 |
 | Flyway | Spring Boot 포함 | DB 마이그레이션 |
 | JWT (jjwt) | 0.12.3 | 토큰 인증 |
 | SpringDoc OpenAPI | 2.7.0 | API 문서화 |
-| Hypersistence Utils | 3.7.3 | Hibernate 최적화 |
+
 
 ---
 
 ## 기술 선택 기준
 
 ### 1. 안정성
-- LTS 버전 선택 (Java 21, PostgreSQL 15)
+- LTS 버전 선택 (Java 21, MySQL 8.0)
 - 검증된 프레임워크 (Spring Boot, Hibernate)
 - 활발한 커뮤니티 지원
 
@@ -446,14 +438,14 @@
 ## 개발 환경 vs 운영 환경
 
 ### 개발 환경 (local, dev)
-- H2 Database (테스트)
+- H2 Database (테스트용 인메모리 DB)
 - 모든 Origin CORS 허용
 - SQL 로깅 활성화
 - 개발자 도구 활성화
 - Swagger UI 접근 가능
 
 ### 운영 환경 (prod)
-- PostgreSQL (AWS RDS)
+- MySQL (AWS RDS)
 - Redis (AWS ElastiCache)
 - 제한된 CORS 설정
 - SQL 로깅 최소화
@@ -496,7 +488,7 @@
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌──────────────────────┬──────────────────────┬────────────────┐
-│   PostgreSQL 15      │     Redis 7.4        │  SMTP Server   │
+│   MySQL 8.0          │     Redis 7.4        │  SMTP Server   │
 │   (Main Database)    │   (Cache + Pub/Sub)  │  (Email)       │
 └──────────────────────┴──────────────────────┴────────────────┘
 ```

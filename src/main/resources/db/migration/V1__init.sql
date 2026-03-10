@@ -31,6 +31,7 @@ CREATE TABLE discussion_rooms
     district        VARCHAR(30)       NOT NULL,
     version         BIGINT            NOT NULL DEFAULT 0,
     created_at      DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    access_level VARCHAR(30) NOT NULL DEFAULT 'PUBLIC',
     updated_at      DATETIME,
     deleted_at      DATETIME
 ) COMMENT '논의가 이루어지는 공간(채팅방) 테이블';
@@ -51,19 +52,20 @@ CREATE TABLE members
 ) COMMENT '사용자와 논의방의 다대다 관계를 위한 조인 테이블';
 
 
--- 채팅 테이블 (chats)
+-- 메시지 테이블 (messages)
 -- Stores all messages sent within discussion rooms.
-CREATE TABLE chat
+CREATE TABLE messages
 (
-    chat_id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id         BIGINT            NOT NULL,
     room_id         BIGINT            NOT NULL,
-    sender_id       BIGINT,
     content         TEXT              NOT NULL,
-    chat_type       ENUM('TEXT', 'ENTRY', 'EXIT') NOT NULL DEFAULT 'TEXT',
-    created_at      DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at      DATETIME,
+    updated_at      DATETIME,
+    deleted_at      DATETIME,
 
-    CONSTRAINT fk_chat_discussion_room FOREIGN KEY (room_id) REFERENCES discussion_rooms (room_id) ON DELETE CASCADE,
-    CONSTRAINT fk_chat_sender FOREIGN KEY (sender_id) REFERENCES users (user_id) ON DELETE SET NULL -- 발신자 탈퇴 시 메시지는 남도록 SET NULL 처리
+    CONSTRAINT fk_messages_discussion_room FOREIGN KEY (room_id) REFERENCES discussion_rooms (room_id) ON DELETE CASCADE,
+    CONSTRAINT fk_messages_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 ) COMMENT '논의방에서 주고받은 메시지 정보를 저장하는 테이블';
 
 
@@ -74,8 +76,8 @@ CREATE TABLE proposals
     proposal_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
     room_id           BIGINT            NOT NULL,
     author_id         BIGINT,                      -- 마지막 저장자 ID (NULL 허용)
-    title             VARCHAR(100)      NOT NULL,
-    contents          JSON              NOT NULL,
+    title             VARCHAR(100),
+    contents          JSON,
     required_consents INTEGER           NOT NULL DEFAULT 1,
     consent_deadline  DATETIME,
     status            VARCHAR(30)       NOT NULL DEFAULT 'UNSUBMITTABLE',
