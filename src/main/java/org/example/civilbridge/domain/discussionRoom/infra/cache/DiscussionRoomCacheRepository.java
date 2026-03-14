@@ -105,11 +105,27 @@ public interface DiscussionRoomCacheRepository {
     /**
      * 논의방 정보 조회 (room:{id})
      * 캐시 미스 시 DB에서 조회하여 캐싱 후 반환
-     * 
+     *
      * @param roomId 논의방 ID
      * @return 캐시된 논의방 정보 (없으면 Empty)
      */
     Optional<DiscussionRoomCacheModel> retrieveCachingRoom(Long roomId);
+
+    /**
+     * Redis에서만 논의방 정보 조회 (DB fallback 없음)
+     * 목록 조회처럼 이미 메모리에 데이터가 있는 경우 사용
+     *
+     * @param roomId 논의방 ID
+     * @return 캐시된 논의방 정보 (캐시 미스 시 Empty)
+     */
+    Optional<DiscussionRoomCacheModel> getCachedRoomOnly(Long roomId);
+
+    /**
+     * 논의방 정보를 Redis에 캐싱 (room:{id} Hash만)
+     *
+     * @param model 캐싱할 논의방 모델
+     */
+    void cacheRoomInfo(DiscussionRoomCacheModel model);
     
     /**
      * 여러 논의방 정보 일괄 조회 (전체조회시 사용)
