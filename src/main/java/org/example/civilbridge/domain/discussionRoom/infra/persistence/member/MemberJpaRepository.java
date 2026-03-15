@@ -1,5 +1,6 @@
 package org.example.civilbridge.domain.discussionRoom.infra.persistence.member;
 
+import org.example.civilbridge.domain.discussionRoom.infra.persistence.discussionRoom.DiscussionRoomEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,10 +31,10 @@ public interface MemberJpaRepository extends JpaRepository<MemberEntity, Long> {
     int countByRoomId(Long roomId);
 
     /**
-     * 사용자가 참여한 논의방 ID 목록 조회 (최신 참여순)
+     * 사용자가 참여한 논의방 목록 조회 (최신 참여순)
      */
-    @Query("SELECT m.roomId FROM MemberEntity m WHERE m.userId = :userId ORDER BY m.createdAt DESC")
-    Page<Long> findRoomIdsByUserIdOrderByJoinedAtDesc(Long userId, Pageable pageable);
+    @Query("SELECT dr FROM DiscussionRoomEntity dr, MemberEntity m WHERE dr.id = m.roomId AND m.userId = :userId ORDER BY m.createdAt DESC")
+    Page<DiscussionRoomEntity> findRoomsByUserIdOrderByJoinedAtDesc(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * 여러 논의방의 멤버 수 일괄 조회 (N+1 쿼리 방지)

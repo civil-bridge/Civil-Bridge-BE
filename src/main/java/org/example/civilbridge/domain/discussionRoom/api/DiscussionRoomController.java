@@ -71,7 +71,7 @@ public class DiscussionRoomController {
             @Parameter(description = "페이지 크기", example = "15")
             @RequestParam(defaultValue = "15") int size
     ) {
-        DiscussionRoomListRes response = discussionRoomService.retrieveTotalRooms(page, size);
+        DiscussionRoomListRes response = discussionRoomService.retrieveRoomsByPage(page, size);
         
         return ResponseEntity.ok(
                 ApiResponse.success(response, "논의방 목록을 조회했습니다.")

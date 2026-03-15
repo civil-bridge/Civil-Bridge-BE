@@ -1,8 +1,10 @@
 package org.example.civilbridge.domain.discussionRoom.infra.persistence.member;
 
 import lombok.RequiredArgsConstructor;
+import org.example.civilbridge.domain.discussionRoom.domain.model.DiscussionRoom;
 import org.example.civilbridge.domain.discussionRoom.domain.model.Member;
 import org.example.civilbridge.domain.discussionRoom.domain.repository.MemberRepository;
+import org.example.civilbridge.domain.discussionRoom.infra.persistence.discussionRoom.DiscussionRoomEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -46,8 +48,9 @@ public class MemberRepositoryImpl implements MemberRepository {
     }
 
     @Override
-    public Page<Long> findRoomIdsByUserId(Long userId, Pageable pageable) {
-        return memberJpaRepository.findRoomIdsByUserIdOrderByJoinedAtDesc(userId, pageable);
+    public Page<DiscussionRoom> findRoomsByUserId(Long userId, Pageable pageable) {
+        return memberJpaRepository.findRoomsByUserIdOrderByJoinedAtDesc(userId, pageable)
+                .map(DiscussionRoomEntity::toDomain);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.example.civilbridge.domain.discussionRoom.domain.repository;
 
+import org.example.civilbridge.domain.discussionRoom.domain.model.DiscussionRoom;
 import org.example.civilbridge.domain.discussionRoom.domain.model.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,12 +45,12 @@ public interface MemberRepository {
     int countByRoomId(Long roomId);
 
     /**
-     * 사용자가 참여한 논의방 ID 목록 조회 (페이징, 최신 참여순)
+     * 사용자가 참여한 논의방 목록 조회 (페이징, 최신 참여순)
      * @param userId 사용자 ID
      * @param pageable 페이징 정보
-     * @return 페이징된 논의방 ID 목록
+     * @return 페이징된 논의방 목록
      */
-    Page<Long> findRoomIdsByUserId(Long userId, Pageable pageable);
+    Page<DiscussionRoom> findRoomsByUserId(Long userId, Pageable pageable);
 
     /**
      * 여러 논의방의 멤버 수 일괄 조회 (N+1 쿼리 방지)

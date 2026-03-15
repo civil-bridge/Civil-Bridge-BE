@@ -13,7 +13,6 @@ import org.example.civilbridge.domain.discussionRoom.domain.repository.MemberRep
 import org.example.civilbridge.domain.discussionRoom.exception.DiscussionRoomErrorCode;
 import org.example.civilbridge.domain.discussionRoom.infra.cache.DiscussionRoomCacheRepository;
 import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionRoomCacheModel;
-import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionRoomsPage;
 import org.example.civilbridge.domain.user.domain.model.User;
 import org.example.civilbridge.domain.user.domain.repository.UserRepository;
 import org.example.civilbridge.domain.user.exception.UserErrorCode;
@@ -174,7 +173,7 @@ public class DiscussionRoomService {
      * @return 논의방 목록 및 페이징 정보
      */
     @Transactional(readOnly = true)
-    public DiscussionRoomListRes retrieveTotalRooms(int page, int size) {
+    public DiscussionRoomListRes retrieveRoomsByPage(int page, int size) {
         log.info("전체 논의방 목록 조회 - page: {}, size: {}", page, size);
 
         // 1. DB에서 논의방 목록 조회 (페이징) - DB가 source of truth
@@ -186,22 +185,23 @@ public class DiscussionRoomService {
             return DiscussionRoomListRes.of(List.of(), page, size, 0);
         }
 
-        // 2. 각 방 상세 정보 조회 (N+1 쿼리 방지: 멤버 수 일괄 조회)
+        // 2. 멤버 수 일괄 조회를 위한 방 ID 목록 추출
         List<DiscussionRoom> rooms = roomPage.getContent();
         List<Long> roomIds = rooms.stream()
                 .map(DiscussionRoom::getId)
                 .collect(Collectors.toList());
 
-        // 멤버 수 일괄 조회 (N+1 방지)
+        // 방별 멤버 수 IN절로 한 번에 조회  (N+1 방지)--여기까지 이해함(2026-03-13)
         Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
 
         List<DiscussionRoomInfo> roomSummaries = rooms.stream()
                 .map(room -> {
-                    // retrieveCachingRoom: 캐시 미스 시 DB 조회 후 캐싱
-                    DiscussionRoomCacheModel cached = cacheRepository.retrieveCachingRoom(room.getId())
-                            .orElseGet(() -> {
+                    DiscussionRoomCacheModel cached = cacheRepository.getCachedRoomOnly(room.getId()) // 캐시 히트 → 캐시에서 반환
+                            .orElseGet(() -> { // 캐시 미스 → 메모리 데이터로 조립 후 캐싱
                                 int currentUsers = memberCountMap.getOrDefault(room.getId(), 0);
-                                return DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
+                                DiscussionRoomCacheModel model = DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
+                                cacheRepository.cacheRoomInfo(model);
+                                return model;
                             });
                     return DiscussionRoomInfo.from(cached);
                 })
@@ -231,42 +231,45 @@ public class DiscussionRoomService {
     public DiscussionRoomListRes retrieveJoinedRooms(Long userId, int page, int size) {
         log.info("내가 참여한 논의방 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
 
-        // 1. DB에서 사용자가 참여한 방 ID 목록 조회 (페이징) - DB가 source of truth
+        // 1. DB에서 사용자가 참여한 논의방 목록 조회 (페이징) - DB가 source of truth
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Long> roomIdPage = memberRepository.findRoomIdsByUserId(userId, pageable);
+        Page<DiscussionRoom> roomPage = memberRepository.findRoomsByUserId(userId, pageable);
 
-        if (roomIdPage.isEmpty()) {
+        if (roomPage.isEmpty()) {
             log.debug("참여한 논의방 없음 - userId: {}", userId);
             return DiscussionRoomListRes.of(List.of(), page, size, 0);
         }
 
-        // 2. 각 방 상세 정보 조회 (N+1 쿼리 방지: 일괄 조회)
-        List<Long> roomIds = roomIdPage.getContent();
-        List<DiscussionRoom> rooms = discussionRoomRepository.findAllByIdIn(roomIds);
+        // 2. 방별 멤버 수 IN절로 한 번에 조회 (N+1 방지)
+        List<DiscussionRoom> rooms = roomPage.getContent();
+        List<Long> roomIds = rooms.stream()
+                .map(DiscussionRoom::getId)
+                .collect(Collectors.toList());
 
-        // 멤버 수 일괄 조회 (N+1 방지)
         Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
 
         List<DiscussionRoomInfo> roomSummaries = rooms.stream()
                 .map(room -> {
-                    // retrieveCachingRoom: 캐시 미스 시 DB 조회 후 캐싱
-                    DiscussionRoomCacheModel cached = cacheRepository.retrieveCachingRoom(room.getId())
+                    // 캐시 히트 → 캐시에서 반환, 캐시 미스 → 메모리 데이터로 조립 후 캐싱
+                    DiscussionRoomCacheModel cached = cacheRepository.getCachedRoomOnly(room.getId())
                             .orElseGet(() -> {
                                 int currentUsers = memberCountMap.getOrDefault(room.getId(), 0);
-                                return DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
+                                DiscussionRoomCacheModel model = DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
+                                cacheRepository.cacheRoomInfo(model);
+                                return model;
                             });
                     return DiscussionRoomInfo.from(cached);
                 })
                 .collect(Collectors.toList());
 
         log.info("내가 참여한 논의방 목록 조회 성공 - userId: {}, 조회된 방: {}개, 전체: {}개",
-                userId, roomSummaries.size(), roomIdPage.getTotalElements());
+                userId, roomSummaries.size(), roomPage.getTotalElements());
 
         return DiscussionRoomListRes.of(
                 roomSummaries,
                 page,
                 size,
-                roomIdPage.getTotalElements()
+                roomPage.getTotalElements()
         );
     }
 

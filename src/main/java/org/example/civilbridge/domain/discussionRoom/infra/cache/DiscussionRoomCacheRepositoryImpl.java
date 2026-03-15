@@ -331,6 +331,41 @@ public class DiscussionRoomCacheRepositoryImpl implements DiscussionRoomCacheRep
         }
     }
     
+    // Redis에서만 단일 논의방 조회
+    @Override
+    public Optional<DiscussionRoomCacheModel> getCachedRoomOnly(Long roomId) {
+        try {
+            String roomKey = RedisKeyGenerator.generateRoomInfoKey(roomId);
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(roomKey);
+
+            if (entries.isEmpty()) {
+                log.debug("캐시 미스 - room:{}", roomId);
+                return Optional.empty();
+            }
+
+            DiscussionRoomCacheModel cached = DiscussionRoomCacheModel.fromRedisHash(entries);
+            log.debug("캐시 히트 - room:{}", roomId);
+            return Optional.ofNullable(cached);
+
+        } catch (Exception e) {
+            log.error("캐시 조회 실패 - room:{}, error: {}", roomId, e.getMessage(), e);
+            return Optional.empty();
+        }
+    }
+
+    // 논의방 정보를 Redis에만 캐싱 (room:{id} Hash)
+    @Override
+    public void cacheRoomInfo(DiscussionRoomCacheModel model) {
+        try {
+            String roomKey = RedisKeyGenerator.generateRoomInfoKey(model.getId());
+            redisTemplate.opsForHash().putAll(roomKey, model.toRedisHash());
+            redisTemplate.expire(roomKey, TTL_ROOM_INFO);
+            log.debug("논의방 정보 캐싱 완료 - room:{}", model.getId());
+        } catch (Exception e) {
+            log.error("논의방 정보 캐싱 실패 - room:{}, error: {}", model.getId(), e.getMessage(), e);
+        }
+    }
+
     // 여러 논의방 일괄 조회
     @Override
     public List<DiscussionRoomCacheModel> retrieveTotalCachingRoom(List<Long> roomIds) {
