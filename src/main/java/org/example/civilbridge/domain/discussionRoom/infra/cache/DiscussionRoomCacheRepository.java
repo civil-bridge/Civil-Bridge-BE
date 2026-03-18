@@ -5,6 +5,7 @@ import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionR
 import org.example.civilbridge.domain.discussionRoom.infra.cache.dto.DiscussionRoomsPage;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -119,6 +120,15 @@ public interface DiscussionRoomCacheRepository {
      * @return 캐시된 논의방 정보 (캐시 미스 시 Empty)
      */
     Optional<DiscussionRoomCacheModel> getCachedRoomOnly(Long roomId);
+
+    /**
+     * 여러 논의방 정보를 Redis Pipeline으로 일괄 조회 (DB fallback 없음)
+     * 하나의 왕복으로 N개의 HGETALL을 실행한다.
+     *
+     * @param roomIds 조회할 논의방 ID 목록
+     * @return roomId → Optional<캐시모델> 맵 (캐시 미스 방은 Optional.empty())
+     */
+    Map<Long, Optional<DiscussionRoomCacheModel>> getCachedRoomsAll(List<Long> roomIds);
 
     /**
      * 논의방 정보를 Redis에 캐싱 (room:{id} Hash만)
