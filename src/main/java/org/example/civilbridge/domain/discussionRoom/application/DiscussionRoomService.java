@@ -20,10 +20,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +39,21 @@ public class DiscussionRoomService {
     private final MemberRepository memberRepository;
     private final DiscussionRoomCacheRepository cacheRepository;
     private final UserRepository userRepository;
+    private final PlatformTransactionManager transactionManager;
+    private TransactionTemplate readOnlyTx;
+
+    @PostConstruct
+    private void initTransactionTemplate() {
+        readOnlyTx = new TransactionTemplate(transactionManager);
+        readOnlyTx.setReadOnly(true);
+    }
+
+    private record JoinedRoomsDbResult(
+        List<DiscussionRoom> rooms,
+        List<Long> roomIds,
+        Map<Long, Integer> memberCountMap,
+        long totalElements
+    ) {}
 
     /**
      * 논의방 생성
@@ -227,33 +246,42 @@ public class DiscussionRoomService {
      * @param size 페이지 크기
      * @return 논의방 목록 및 페이징 정보
      */
-    @Transactional(readOnly = true)
     public DiscussionRoomListRes retrieveJoinedRooms(Long userId, int page, int size) {
         log.info("내가 참여한 논의방 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
 
-        // 1. DB에서 사용자가 참여한 논의방 목록 조회 (페이징) - DB가 source of truth
-        Pageable pageable = PageRequest.of(page - 1, size);
-        Page<DiscussionRoom> roomPage = memberRepository.findRoomsByUserId(userId, pageable);
+        // 1. DB 쿼리 — 트랜잭션 안에서 완료 후 커넥션 반납
+        JoinedRoomsDbResult dbResult = readOnlyTx.execute(status -> {
+            Pageable pageable = PageRequest.of(page - 1, size);
+            Page<DiscussionRoom> roomPage = memberRepository.findRoomsByUserId(userId, pageable);
 
-        if (roomPage.isEmpty()) {
-            log.debug("참여한 논의방 없음 - userId: {}", userId);
+            if (roomPage.isEmpty()) {
+                log.debug("참여한 논의방 없음 - userId: {}", userId);
+                return null;
+            }
+
+            List<DiscussionRoom> rooms = roomPage.getContent();
+            List<Long> roomIds = rooms.stream()
+                    .map(DiscussionRoom::getId)
+                    .collect(Collectors.toList());
+            Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
+
+            return new JoinedRoomsDbResult(rooms, roomIds, memberCountMap, roomPage.getTotalElements());
+        });
+
+        if (dbResult == null) {
             return DiscussionRoomListRes.of(List.of(), page, size, 0);
         }
 
-        // 2. 방별 멤버 수 IN절로 한 번에 조회 (N+1 방지)
-        List<DiscussionRoom> rooms = roomPage.getContent();
-        List<Long> roomIds = rooms.stream()
-                .map(DiscussionRoom::getId)
-                .collect(Collectors.toList());
+        // 2. Redis Pipeline 조회 — 트랜잭션 밖, 한 번의 왕복
+        Map<Long, Optional<DiscussionRoomCacheModel>> cacheResults =
+                cacheRepository.getCachedRoomsAll(dbResult.roomIds());
 
-        Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
-
-        List<DiscussionRoomInfo> roomSummaries = rooms.stream()
+        // 3. 응답 조립 (캐시 미스 시 메모리 데이터로 조립 후 캐싱)
+        List<DiscussionRoomInfo> roomSummaries = dbResult.rooms().stream()
                 .map(room -> {
-                    // 캐시 히트 → 캐시에서 반환, 캐시 미스 → 메모리 데이터로 조립 후 캐싱
-                    DiscussionRoomCacheModel cached = cacheRepository.getCachedRoomOnly(room.getId())
+                    DiscussionRoomCacheModel cached = cacheResults.get(room.getId())
                             .orElseGet(() -> {
-                                int currentUsers = memberCountMap.getOrDefault(room.getId(), 0);
+                                int currentUsers = dbResult.memberCountMap().getOrDefault(room.getId(), 0);
                                 DiscussionRoomCacheModel model = DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
                                 cacheRepository.cacheRoomInfo(model);
                                 return model;
@@ -263,14 +291,9 @@ public class DiscussionRoomService {
                 .collect(Collectors.toList());
 
         log.info("내가 참여한 논의방 목록 조회 성공 - userId: {}, 조회된 방: {}개, 전체: {}개",
-                userId, roomSummaries.size(), roomPage.getTotalElements());
+                userId, roomSummaries.size(), dbResult.totalElements());
 
-        return DiscussionRoomListRes.of(
-                roomSummaries,
-                page,
-                size,
-                roomPage.getTotalElements()
-        );
+        return DiscussionRoomListRes.of(roomSummaries, page, size, dbResult.totalElements());
     }
 
     @Transactional
