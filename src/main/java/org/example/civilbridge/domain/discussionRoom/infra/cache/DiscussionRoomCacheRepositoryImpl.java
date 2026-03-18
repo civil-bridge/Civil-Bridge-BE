@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 /**
  * 논의방 Redis 캐시 Repository 구현체
@@ -350,6 +351,53 @@ public class DiscussionRoomCacheRepositoryImpl implements DiscussionRoomCacheRep
         } catch (Exception e) {
             log.error("캐시 조회 실패 - room:{}, error: {}", roomId, e.getMessage(), e);
             return Optional.empty();
+        }
+    }
+
+    // 여러 논의방 Pipeline 일괄 조회 (DB fallback 없음)
+    @Override
+    public Map<Long, Optional<DiscussionRoomCacheModel>> getCachedRoomsAll(List<Long> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            List<String> keys = roomIds.stream()
+                    .map(RedisKeyGenerator::generateRoomInfoKey)
+                    .collect(Collectors.toList());
+
+            // Pipeline: 한 번의 왕복으로 모든 HGETALL 실행
+            List<Object> results = redisTemplate.executePipelined(new SessionCallback<Object>() {
+                @Override
+                @SuppressWarnings("unchecked")
+                public Object execute(RedisOperations operations) {
+                    for (String key : keys) {
+                        operations.opsForHash().entries(key);
+                    }
+                    return null;
+                }
+            });
+
+            Map<Long, Optional<DiscussionRoomCacheModel>> resultMap = new LinkedHashMap<>();
+            for (int i = 0; i < roomIds.size(); i++) {
+                Long roomId = roomIds.get(i);
+                @SuppressWarnings("unchecked")
+                Map<Object, Object> entries = (Map<Object, Object>) results.get(i);
+                if (entries == null || entries.isEmpty()) {
+                    log.debug("캐시 미스 (pipeline) - room:{}", roomId);
+                    resultMap.put(roomId, Optional.empty());
+                } else {
+                    resultMap.put(roomId, Optional.ofNullable(DiscussionRoomCacheModel.fromRedisHash(entries)));
+                    log.debug("캐시 히트 (pipeline) - room:{}", roomId);
+                }
+            }
+            return resultMap;
+
+        } catch (Exception e) {
+            log.error("Pipeline 캐시 조회 실패 - rooms:{}, error: {}", roomIds, e.getMessage(), e);
+            // graceful degradation: 모두 미스로 처리
+            Map<Long, Optional<DiscussionRoomCacheModel>> fallback = new LinkedHashMap<>();
+            roomIds.forEach(id -> fallback.put(id, Optional.empty()));
+            return fallback;
         }
     }
 
