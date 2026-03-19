@@ -55,6 +55,13 @@ public class DiscussionRoomService {
         long totalElements
     ) {}
 
+    private record TotalRoomsDbResult(
+        List<DiscussionRoom> rooms,
+        List<Long> roomIds,
+        Map<Long, Integer> memberCountMap,
+        long totalElements
+    ) {}
+
     /**
      * 논의방 생성
      * Write-Through 전략: DB 저장 후 Redis 캐싱
@@ -191,33 +198,42 @@ public class DiscussionRoomService {
      * @param size 페이지 크기
      * @return 논의방 목록 및 페이징 정보
      */
-    @Transactional(readOnly = true)
     public DiscussionRoomListRes retrieveRoomsByPage(int page, int size) {
         log.info("전체 논의방 목록 조회 - page: {}, size: {}", page, size);
 
-        // 1. DB에서 논의방 목록 조회 (페이징) - DB가 source of truth
-        Pageable pageable = PageRequest.of(page - 1, size);
-        Page<DiscussionRoom> roomPage = discussionRoomRepository.findAllByOrderByCreatedAtDesc(pageable);
+        // 1. DB 쿼리 — 트랜잭션 안에서 완료 후 커넥션 반납
+        TotalRoomsDbResult dbResult = readOnlyTx.execute(status -> {
+            Pageable pageable = PageRequest.of(page - 1, size);
+            Page<DiscussionRoom> roomPage = discussionRoomRepository.findAllByOrderByCreatedAtDesc(pageable);
 
-        if (roomPage.isEmpty()) {
-            log.debug("조회된 논의방 없음");
+            if (roomPage.isEmpty()) {
+                log.debug("조회된 논의방 없음");
+                return null;
+            }
+
+            List<DiscussionRoom> rooms = roomPage.getContent();
+            List<Long> roomIds = rooms.stream()
+                    .map(DiscussionRoom::getId)
+                    .collect(Collectors.toList());
+            Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
+
+            return new TotalRoomsDbResult(rooms, roomIds, memberCountMap, roomPage.getTotalElements());
+        });
+
+        if (dbResult == null) {
             return DiscussionRoomListRes.of(List.of(), page, size, 0);
         }
 
-        // 2. 멤버 수 일괄 조회를 위한 방 ID 목록 추출
-        List<DiscussionRoom> rooms = roomPage.getContent();
-        List<Long> roomIds = rooms.stream()
-                .map(DiscussionRoom::getId)
-                .collect(Collectors.toList());
+        // 2. Redis Pipeline 조회 — 트랜잭션 밖, 한 번의 왕복
+        Map<Long, Optional<DiscussionRoomCacheModel>> cacheResults =
+                cacheRepository.getCachedRoomsAll(dbResult.roomIds());
 
-        // 방별 멤버 수 IN절로 한 번에 조회  (N+1 방지)--여기까지 이해함(2026-03-13)
-        Map<Long, Integer> memberCountMap = memberRepository.countByRoomIds(roomIds);
-
-        List<DiscussionRoomInfo> roomSummaries = rooms.stream()
+        // 3. 응답 조립 (캐시 미스 시 메모리 데이터로 조립 후 캐싱)
+        List<DiscussionRoomInfo> roomSummaries = dbResult.rooms().stream()
                 .map(room -> {
-                    DiscussionRoomCacheModel cached = cacheRepository.getCachedRoomOnly(room.getId()) // 캐시 히트 → 캐시에서 반환
-                            .orElseGet(() -> { // 캐시 미스 → 메모리 데이터로 조립 후 캐싱
-                                int currentUsers = memberCountMap.getOrDefault(room.getId(), 0);
+                    DiscussionRoomCacheModel cached = cacheResults.get(room.getId())
+                            .orElseGet(() -> {
+                                int currentUsers = dbResult.memberCountMap().getOrDefault(room.getId(), 0);
                                 DiscussionRoomCacheModel model = DiscussionRoomCacheModel.fromDomainModel(room, currentUsers);
                                 cacheRepository.cacheRoomInfo(model);
                                 return model;
@@ -227,14 +243,9 @@ public class DiscussionRoomService {
                 .collect(Collectors.toList());
 
         log.info("전체 논의방 목록 조회 성공 - 조회된 방: {}개, 전체: {}개",
-                roomSummaries.size(), roomPage.getTotalElements());
+                roomSummaries.size(), dbResult.totalElements());
 
-        return DiscussionRoomListRes.of(
-                roomSummaries,
-                page,
-                size,
-                roomPage.getTotalElements()
-        );
+        return DiscussionRoomListRes.of(roomSummaries, page, size, dbResult.totalElements());
     }
 
     /**
