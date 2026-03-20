@@ -74,6 +74,27 @@ public class MessageService {
         }
     }
 
+    @Transactional
+    public void processChatMessageForHttp(MessageRequest request, Long userId) {
+        if (userId == null || !userId.equals(request.getUserId())) {
+            throw new BusinessException(MessageErrorCode.MESSAGE_USER_INCOINSISTENCY);
+        }
+        validateMessage(request);
+        validateMembership(request.getUserId(), request.getRoomId());
+
+        UserEntity userEntity = userJpaRepository.findById(request.getUserId())
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        DiscussionRoomEntity roomEntity = discussionRoomJpaRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
+
+        MessageEntity messageEntity = MessageEntity.builder()
+                .content(request.getContent())
+                .user(userEntity)
+                .discussionRoom(roomEntity)
+                .build();
+        messageRepository.save(messageEntity);
+    }
+
     public void processJoinMessage(MessageRequest request, SimpMessageHeaderAccessor headerAccessor) {
         // userId는 STOMP CONNECT 시점에 JWT로부터 StompChannelInterceptor가 세션에 저장
 
