@@ -1,10 +1,13 @@
 package org.example.civilbridge.domain.message.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.civilbridge.common.dto.ApiResponse;
+import org.example.civilbridge.common.jwt.CustomUserDetails;
 import org.example.civilbridge.domain.message.api.dto.MessagePageResponse;
 import org.example.civilbridge.domain.message.api.dto.MessageRequest;
 import org.example.civilbridge.domain.message.application.MessageService;
@@ -12,9 +15,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
@@ -38,6 +44,17 @@ public class MessageController {
     public void addUser(@Payload @Valid MessageRequest request, SimpMessageHeaderAccessor headerAccessor) {
         // 세션에 사용자 정보 저장
         messageService.processJoinMessage(request, headerAccessor);
+    }
+
+    @PostMapping("/api/messages/send")
+    @Operation(summary = "채팅 메시지 전송 (HTTP)", description = "HTTP 기반 채팅 메시지 전송 (부하테스트용)",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<Void>> sendMessageHttp(
+            @Valid @RequestBody MessageRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        messageService.processChatMessageForHttp(request, userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(null, "메시지가 전송되었습니다."));
     }
 
     @GetMapping("/api/messages/rooms/{roomId}")
