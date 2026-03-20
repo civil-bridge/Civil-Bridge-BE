@@ -76,9 +76,7 @@ public class MessageService {
 
     @Transactional
     public void processChatMessageForHttp(MessageRequest request, Long userId) {
-        if (userId == null || !userId.equals(request.getUserId())) {
-            throw new BusinessException(MessageErrorCode.MESSAGE_USER_INCOINSISTENCY);
-        }
+
         validateMessage(request);
         validateMembership(request.getUserId(), request.getRoomId());
 
