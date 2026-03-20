@@ -49,10 +49,10 @@ public interface DiscussionRoomRepository {
     List<DiscussionRoom> findAllByIdIn(List<Long> ids);
 
     /**
-     * 논의방 ID로 조회 (비관적 락)
-     * 동시성 제어가 필요한 경우 사용 (SELECT FOR UPDATE)
+d     * 논의방 ID로 조회 (낙관적 락)
+     * 블로킹 없이 조회하며 커밋 시점에 버전 충돌 감지
      * @param id 논의방 ID
-     * @return 조회된 논의방 (잠금 획득)
+     * @return 조회된 논의방 (삭제된 방 제외)
      */
-    Optional<DiscussionRoom> findByIdWithLock(Long id);
+    Optional<DiscussionRoom> findByIdActive(Long id);
 }

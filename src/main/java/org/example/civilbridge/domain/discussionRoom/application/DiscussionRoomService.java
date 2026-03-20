@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -41,11 +42,13 @@ public class DiscussionRoomService {
     private final UserRepository userRepository;
     private final PlatformTransactionManager transactionManager;
     private TransactionTemplate readOnlyTx;
+    private TransactionTemplate writeTx;
 
     @PostConstruct
     private void initTransactionTemplate() {
         readOnlyTx = new TransactionTemplate(transactionManager);
         readOnlyTx.setReadOnly(true);
+        writeTx = new TransactionTemplate(transactionManager);
     }
 
     private record JoinedRoomsDbResult(
@@ -307,14 +310,29 @@ public class DiscussionRoomService {
         return DiscussionRoomListRes.of(roomSummaries, page, size, dbResult.totalElements());
     }
 
-    @Transactional
     public void leaveRoom(Long userId, Long roomId) {
         log.info("논의방 나가기 요청 - userId: {}, roomId: {}", userId, roomId);
 
-        // 1. 비관적 락으로 방 조회 (다른 트랜잭션 대기)
-        DiscussionRoom room = discussionRoomRepository.findByIdWithLock(roomId)
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                writeTx.executeWithoutResult(status -> executeLeaveRoom(userId, roomId));
+                log.info("논의방 나가기 성공 - userId: {}, roomId: {}", userId, roomId);
+                return;
+            } catch (ObjectOptimisticLockingFailureException e) {
+                log.warn("낙관적 락 충돌 - roomId: {}, attempt: {}/{}", roomId, attempt, maxRetries);
+                if (attempt == maxRetries) {
+                    throw new BusinessException(DiscussionRoomErrorCode.CONCURRENT_LEAVE_CONFLICT);
+                }
+            }
+        }
+    }
+
+    private void executeLeaveRoom(Long userId, Long roomId) {
+        // 1. 낙관적 락으로 방 조회 (커밋 시점에 버전 충돌 감지)
+        discussionRoomRepository.findByIdActive(roomId)
                 .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
-        log.debug("방 잠금 획득 - roomId: {}", roomId);
+        log.debug("방 조회 완료 (낙관적 락) - roomId: {}", roomId);
 
         // 2. 사용자가 실제로 멤버인지 확인
         if (!memberRepository.existsByUserIdAndRoomId(userId, roomId)) {
@@ -338,8 +356,6 @@ public class DiscussionRoomService {
             discussionRoomRepository.softDelete(roomId);
             cacheRepository.evictRoomCache(roomId, userId);
         }
-
-        log.info("논의방 나가기 성공 - userId: {}, roomId: {}", userId, roomId);
     }
 
 }

@@ -58,8 +58,8 @@ public class DiscussionRoomRepositoryImpl implements DiscussionRoomRepository {
     }
 
     @Override
-    public Optional<DiscussionRoom> findByIdWithLock(Long id) {
-        return discussionRoomJpaRepository.findByIdWithLock(id)
+    public Optional<DiscussionRoom> findByIdActive(Long id) {
+        return discussionRoomJpaRepository.findByIdActive(id)
                 .map(DiscussionRoomEntity::toDomain);
     }
 }
