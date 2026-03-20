@@ -9,7 +9,8 @@ public enum DiscussionRoomErrorCode implements ErrorCode {
     USERS_ONLY_ROOM(403, "R003", "이 논의방은 일반 사용자만 참여할 수 있습니다."),
     REGION_MISMATCH(403, "R003", "해당 지역 주민만 참여할 수 있는 논의방입니다."),
     ALREADY_JOINED_ROOM(409, "R005", "이미 참여 중인 논의방입니다."),
-    NOT_A_ROOM_MEMBER(403, "R006", "해당 논의방의 멤버가 아닙니다.");
+    NOT_A_ROOM_MEMBER(403, "R006", "해당 논의방의 멤버가 아닙니다."),
+    CONCURRENT_LEAVE_CONFLICT(409, "R007", "동시 요청으로 처리에 실패했습니다. 잠시 후 다시 시도해주세요.");
     DiscussionRoomErrorCode (int status, String code, String message){
         this.status = status;
         this.code = code;

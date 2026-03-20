@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+
 import java.util.List;
 import java.util.Optional;
 
@@ -42,11 +43,11 @@ public interface DiscussionRoomJpaRepository extends JpaRepository<DiscussionRoo
     List<DiscussionRoomEntity> findAllByIdIn(@Param("ids") List<Long> ids);
 
     /**
-     * 논의방 ID로 조회 (비관적 락)
-     * SELECT FOR UPDATE를 사용하여 동시성 제어
-     * 다른 트랜잭션의 읽기/쓰기를 차단하고 배타적 잠금 획득
+     * 논의방 ID로 조회 (낙관적 락, FORCE_INCREMENT)
+     * 블로킹 없이 조회하고, 커밋 시점에 version 증가 + 충돌 감지
+     * 충돌 시 ObjectOptimisticLockingFailureException 발생
      */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
     @Query("SELECT d FROM DiscussionRoomEntity d WHERE d.id = :roomId AND d.deletedAt IS NULL")
-    Optional<DiscussionRoomEntity> findByIdWithLock(@Param("roomId") Long roomId);
+    Optional<DiscussionRoomEntity> findByIdActive(@Param("roomId") Long roomId);
 }
