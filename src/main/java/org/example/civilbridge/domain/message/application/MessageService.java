@@ -1,5 +1,7 @@
 package org.example.civilbridge.domain.message.application;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.civilbridge.common.exception.BusinessException;
@@ -19,11 +21,13 @@ import org.example.civilbridge.domain.user.exception.UserErrorCode;
 import org.example.civilbridge.domain.user.infra.persistence.UserEntity;
 import org.example.civilbridge.domain.user.infra.persistence.UserJpaRepository;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -35,6 +39,9 @@ public class MessageService {
     private final UserJpaRepository userJpaRepository;
     private final DiscussionRoomJpaRepository discussionRoomJpaRepository;
     private final MessageRepository messageRepository;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final MessageBatchWriter messageBatchWriter;
+    private final ObjectMapper objectMapper;
 
 
     @Transactional
@@ -74,23 +81,25 @@ public class MessageService {
         }
     }
 
-    @Transactional
     public void processChatMessageForHttp(MessageRequest request, Long userId) {
-
         validateMessage(request);
         validateMembership(request.getUserId(), request.getRoomId());
 
-        UserEntity userEntity = userJpaRepository.findById(request.getUserId())
-                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
-        DiscussionRoomEntity roomEntity = discussionRoomJpaRepository.findById(request.getRoomId())
-                .orElseThrow(() -> new BusinessException(DiscussionRoomErrorCode.ROOM_NOT_FOUND));
+        try {
+            String json = objectMapper.writeValueAsString(Map.of(
+                    "userId", request.getUserId(),
+                    "roomId", request.getRoomId(),
+                    "content", request.getContent()
+            ));
+            stringRedisTemplate.opsForList().leftPush(MessageBatchWriter.QUEUE_KEY, json);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
 
-        MessageEntity messageEntity = MessageEntity.builder()
-                .content(request.getContent())
-                .user(userEntity)
-                .discussionRoom(roomEntity)
-                .build();
-        messageRepository.save(messageEntity);
+        Long queueSize = stringRedisTemplate.opsForList().size(MessageBatchWriter.QUEUE_KEY);
+        if (queueSize != null && queueSize >= MessageBatchWriter.BATCH_SIZE) {
+            messageBatchWriter.flush();
+        }
     }
 
     public void processJoinMessage(MessageRequest request, SimpMessageHeaderAccessor headerAccessor) {
