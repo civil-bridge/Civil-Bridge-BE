@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.civilbridge.common.exception.BusinessException;
 import org.example.civilbridge.common.exception.MessageException;
 import org.example.civilbridge.domain.discussionRoom.exception.DiscussionRoomErrorCode;
+import org.example.civilbridge.domain.discussionRoom.infra.cache.RedisKeyGenerator;
 import org.example.civilbridge.domain.discussionRoom.infra.persistence.discussionRoom.DiscussionRoomEntity;
 import org.example.civilbridge.domain.discussionRoom.infra.persistence.discussionRoom.DiscussionRoomJpaRepository;
 import org.example.civilbridge.domain.discussionRoom.infra.persistence.member.MemberJpaRepository;
@@ -21,6 +22,7 @@ import org.example.civilbridge.domain.user.exception.UserErrorCode;
 import org.example.civilbridge.domain.user.infra.persistence.UserEntity;
 import org.example.civilbridge.domain.user.infra.persistence.UserJpaRepository;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,7 @@ public class MessageService {
     private final DiscussionRoomJpaRepository discussionRoomJpaRepository;
     private final MessageRepository messageRepository;
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final MessageBatchWriter messageBatchWriter;
     private final ObjectMapper objectMapper;
 
@@ -83,7 +86,7 @@ public class MessageService {
 
     public void processChatMessageForHttp(MessageRequest request, Long userId) {
         validateMessage(request);
-        validateMembership(request.getUserId(), request.getRoomId());
+        validateMembershipFromCache(request.getUserId(), request.getRoomId());
 
         try {
             String json = objectMapper.writeValueAsString(Map.of(
@@ -147,6 +150,14 @@ public class MessageService {
 
     private void validateMembership(Long userId, Long roomId) {
         if (!memberJpaRepository.existsByUserIdAndRoomId(userId, roomId)) {
+            throw new MessageException(DiscussionRoomErrorCode.NOT_A_ROOM_MEMBER);
+        }
+    }
+
+    private void validateMembershipFromCache(Long userId, Long roomId) {
+        String key = RedisKeyGenerator.generateUserRoomsKey(userId);
+        Double score = redisTemplate.opsForZSet().score(key, roomId);
+        if (score == null) {
             throw new MessageException(DiscussionRoomErrorCode.NOT_A_ROOM_MEMBER);
         }
     }
