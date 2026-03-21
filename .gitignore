@@ -69,3 +69,4 @@ docker-compose.override.yml
 sonarqube-data/
 sonarqube-extensions/
 sonarqube-logs/
+/tokens.txt
