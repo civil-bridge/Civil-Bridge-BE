@@ -99,10 +99,6 @@ public class MessageService {
             throw new RuntimeException(e);
         }
 
-        Long queueSize = stringRedisTemplate.opsForList().size(MessageBatchWriter.QUEUE_KEY);
-        if (queueSize != null && queueSize >= MessageBatchWriter.BATCH_SIZE) {
-            messageBatchWriter.flush();
-        }
     }
 
     public void processJoinMessage(MessageRequest request, SimpMessageHeaderAccessor headerAccessor) {
