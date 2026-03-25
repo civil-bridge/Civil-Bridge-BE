@@ -30,14 +30,50 @@
 
 ## 🏗 아키텍쳐
 <br>
+
+### 🐳 베포 아키텍쳐
 <img width="2488" height="1450" alt="image" src="https://github.com/user-attachments/assets/c057ba2c-6b4c-4127-8002-41bb3625b9bc" />
 
 <br>
+
+### 📁 패키지 구조
+```
+src/main/java/org/example/civilbridge/
+├── common/          # JWT, WebSocket, 공통 예외 처리
+├── config/          # Spring 설정
+└── domain/
+    ├── user/            # 회원
+    ├── discussionRoom/  # 논의방
+    ├── message/         # 채팅 메시지
+    └── proposal/        # 제안서
+```
+
+각 도메인은 헥사고날 아키텍처 구조를 따릅니다.
+```
+domain/{도메인}/
+├── api/          # Controller, Request/Response DTO
+├── application/  # Service (비즈니스 로직)
+├── domain/       # Entity, Repository 인터페이스
+└── infra/        # JPA 구현체, Redis 어댑터
+```
+<br>
 <br>
 
-## 🗄 ERD 다이어그램
+## 🗄 ERD 다이어그램 및 테이블 설명
 <br>
+
 <img width="1228" height="747" alt="image" src="https://github.com/user-attachments/assets/3c5a39b2-b107-4534-b0fc-b493d053d1c9" />
+
+- `members`는 `users`와 `discussion_rooms` 간 N:M 관계를 해소하는 중간 테이블입니다.  
+- `proposals`와 `messages`는 각각 `users`, `discussion_rooms`에 대한 복합 FK를 가집니다.
+
+
+
+
+
+
+
+
 
 
 
