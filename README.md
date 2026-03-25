@@ -23,3 +23,11 @@
 | Realtime | WebSocket | - | 실시간 토론/채팅 |
 | Infra | AWS EC2 | - | 애플리케이션 서버 배포 |
 | Load Test | nGrinder | - | 부하 테스트 및 성능 측정 |
+
+<br>
+
+## 서버 아키텍쳐
+
+<img width="2488" height="1450" alt="image" src="https://github.com/user-attachments/assets/c057ba2c-6b4c-4127-8002-41bb3625b9bc" />
+
+
