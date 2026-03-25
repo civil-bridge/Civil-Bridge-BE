@@ -10,6 +10,7 @@
 민(民)과 관(官)이 함께 정책을 설계하는 협력적 거버넌스를 구현합니다.
 
 <br>
+<br>
 
 ## 🛠 기술 스택
  
@@ -25,9 +26,19 @@
 | Load Test | nGrinder | - | 부하 테스트 및 성능 측정 |
 
 <br>
+<br>
 
-## 서버 아키텍쳐
-
+## 🏗 아키텍쳐
+<br>
 <img width="2488" height="1450" alt="image" src="https://github.com/user-attachments/assets/c057ba2c-6b4c-4127-8002-41bb3625b9bc" />
+
+<br>
+<br>
+
+## 🗄 ERD 다이어그램
+<br>
+<img width="1228" height="747" alt="image" src="https://github.com/user-attachments/assets/3c5a39b2-b107-4534-b0fc-b493d053d1c9" />
+
+
 
 
